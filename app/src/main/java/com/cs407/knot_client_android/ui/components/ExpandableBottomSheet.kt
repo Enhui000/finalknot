@@ -132,11 +132,15 @@ fun ExpandableBottomSheet(
         
         // 动态圆角：三段式变化
         // 阶段1: 44.dp -> 60.dp
-        // 阶段2: 60.dp -> 30.dp
+        // 阶段2: 60.dp -> top: 42.dp, bottom: 0.dp （完全展开时）
         val currentCornerRadius = if (isPhase2) {
             val phase2Progress = ((animatedHeight.value - expandedHeight.value) / 
                                   (maxExpandedHeight.value - expandedHeight.value)).coerceIn(0f, 1f)
-            60.dp - 30.dp * phase2Progress
+            if (phase2Progress < 0.5f) {
+                60.dp - 30.dp * phase2Progress
+            } else {
+                42.dp + (60.dp - 42.dp) * (phase2Progress - 0.5f)
+            }
         } else {
             44.dp + 16.dp * progress
         }
@@ -316,7 +320,7 @@ fun ExpandableBottomSheet(
                                     .clip(CircleShape)
                                     .border(
                                         width = 2.dp,
-                                        color = Color(0xFFB0B0B0),
+                                        color = Color(0xFFDADADA),
                                         shape = CircleShape
                                     ),
                                 contentScale = ContentScale.Crop
