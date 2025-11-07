@@ -1,5 +1,7 @@
 package com.cs407.knot_client_android.ui.components
 
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,12 +18,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -43,28 +45,39 @@ fun BottomNavigationBar(
     Box(
         modifier = modifier
     ) {
-        // 毛玻璃背景层 (backdrop-blur-md)
+        // 毛玻璃背景层 - Android 原生系统级模糊
         Box(
             modifier = Modifier
                 .width(254.dp)
                 .height(64.dp)
                 .clip(RoundedCornerShape(32.dp))
-                .background(Color.White.copy(alpha = 0.7f))
-                .blur(16.dp)
+                .graphicsLayer {
+                    renderEffect = RenderEffect
+                        .createBlurEffect(40f, 40f, Shader.TileMode.CLAMP)
+                        .asComposeRenderEffect()
+                }
+                .background(Color.White.copy(alpha = 0.6f))
         )
         
-        // 主容器 (带边框)
+        // 主容器 (带边框和半透明背景)
         BoxWithConstraints(
             modifier = Modifier
                 .width(254.dp)
                 .height(64.dp)
                 .border(
                     width = 1.dp,
-                    color = Color(0xFFE5E7EB), // gray-200
+                    color = Color(0xFFE5E7EB).copy(alpha = 0.6f), // 边框也略微透明
                     shape = RoundedCornerShape(32.dp)
                 )
                 .clip(RoundedCornerShape(32.dp))
-                .background(Color.Transparent)
+                // .background(
+                //     brush = Brush.linearGradient(
+                //         colors = listOf(
+                //             Color.White.copy(alpha = 0.3f),
+                //             Color.White.copy(alpha = 0.2f)
+                //         )
+                //     )
+                // )
         ) {
             val containerWidth = maxWidth
             val containerHeight = maxHeight
@@ -97,12 +110,6 @@ fun BottomNavigationBar(
                     .width(sliderWidth)
                     .height(sliderHeight)
                     .scale(1.02f)
-                    .shadow(
-                        elevation = 8.dp,
-                        shape = RoundedCornerShape(32.dp),
-                        ambientColor = Color(0x33636EF1), // 蓝紫色阴影
-                        spotColor = Color(0x1A000000)
-                    )
                     .clip(RoundedCornerShape(32.dp))
                     .background(
                         brush = Brush.linearGradient(

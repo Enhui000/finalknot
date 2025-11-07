@@ -1,5 +1,7 @@
 package com.cs407.knot_client_android.ui.components
 
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,11 +18,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -108,29 +110,35 @@ fun ExpandableBottomSheet(
         // 动态圆角（收起时 32dp，展开时 48dp）
         val currentCornerRadius = 32.dp + 16.dp * progress
         
-        // 毛玻璃背景层（增强柔和感）
+        // 毛玻璃背景层 - Android 原生系统级模糊
+        // 动态透明度：收起时 0.6，展开时 0.9
+        val blurAlpha = 0.6f + 0.3f * progress
+        
         Box(
             modifier = Modifier
                 .width(currentWidth)
                 .height(currentHeight)
                 .clip(RoundedCornerShape(currentCornerRadius))
-                .background(Color.White.copy(alpha = 0.65f)) // 降低不透明度，更通透
-                .blur(20.dp) // 增强模糊，更柔和
+                .graphicsLayer {
+                    renderEffect = RenderEffect
+                        .createBlurEffect(40f, 40f, Shader.TileMode.CLAMP)
+                        .asComposeRenderEffect()
+                }
+                .background(Color.White.copy(alpha = blurAlpha))
         )
         
-        // 主容器（增强浮感）
+        // 主容器
         Box(
             modifier = Modifier
                 .width(currentWidth)
                 .height(currentHeight)
-                .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(currentCornerRadius))
+                .border(1.dp, Color(0xFFE5E7EB).copy(alpha = 0.6f), RoundedCornerShape(currentCornerRadius))
                 .clip(RoundedCornerShape(currentCornerRadius))
-                .shadow(12.dp, RoundedCornerShape(currentCornerRadius)) // 增强阴影，更有浮感
                 .background(
                     brush = Brush.linearGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.95f),
-                            Color.White.copy(alpha = 0.85f)
+                            Color.White.copy(alpha = 0.3f),
+                            Color.White.copy(alpha = 0.2f)
                         )
                     )
                 )
@@ -182,8 +190,6 @@ fun ExpandableBottomSheet(
                         .fillMaxSize()
                         .alpha(progress)
                         .padding(12.dp)
-                        .background(Color.White.copy(alpha = 0.8f))
-                        .clip(RoundedCornerShape(32.dp))
                 ) {
                     // 顶部：搜索框 + 头像
                     Row(
@@ -199,7 +205,7 @@ fun ExpandableBottomSheet(
                                 .weight(1f)
                                 .height(48.dp)
                                 .clip(RoundedCornerShape(24.dp))
-                                .background(Color.White.copy(alpha = 0.8f))
+                                .background(Color.White.copy(alpha = 0.6f))
                                 .padding(horizontal = 16.dp),
                             contentAlignment = Alignment.CenterStart
                         ) {
