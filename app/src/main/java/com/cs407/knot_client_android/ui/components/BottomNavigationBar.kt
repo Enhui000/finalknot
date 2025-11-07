@@ -1,6 +1,7 @@
 package com.cs407.knot_client_android.ui.components
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,7 +23,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.cs407.knot_client_android.R
 
 enum class NavTab {
     MAP,
@@ -207,13 +211,15 @@ private fun ProfileButton(
                 .size(36.dp)
                 .scale(scale)
         ) {
-            // 头像圆圈
-            Box(
+            // 头像图片
+            Image(
+                painter = painterResource(id = R.drawable.user_avatar),
+                contentDescription = "Profile Avatar",
                 modifier = Modifier
                     .size(33.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF636EF1))
-                    .align(Alignment.Center)
+                    .align(Alignment.Center),
+                contentScale = ContentScale.Crop
             )
             
             // 选中时的蓝紫色边框
