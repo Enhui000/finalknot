@@ -26,9 +26,19 @@ import com.cs407.knot_client_android.ui.friend.FriendScreen
 
 @Composable
 fun MainScreen(
-    navController: NavHostController
+    navController: NavHostController,
+    initialTab: String = "MAP"
 ) {
-    var selectedTab by remember { mutableStateOf(NavTab.MAP) }
+    var selectedTab by remember { 
+        mutableStateOf(
+            when (initialTab) {
+                "CHAT" -> NavTab.CHAT
+                "PROFILE" -> NavTab.PROFILE
+                "FRIEND" -> NavTab.FRIEND
+                else -> NavTab.MAP
+            }
+        ) 
+    }
     
     // 展开进度（0f = 收起, 1f = 半展开, 2f = 全展开）
     var expandProgress by remember { mutableStateOf(0f) }

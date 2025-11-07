@@ -319,10 +319,10 @@ fun LoginScreen(
                 onClick = { 
                     if (isLogin) {
                         // TODO: Login logic
-                        navController.navigate(Screen.Main.route)
+                        navController.navigate(Screen.Main.createRoute())
                     } else {
                         // TODO: Register logic
-                        navController.navigate(Screen.Main.route)
+                        navController.navigate(Screen.Main.createRoute())
                     }
                 },
                 modifier = Modifier
