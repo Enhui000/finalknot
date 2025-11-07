@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cs407.knot_client_android.R
 import kotlinx.coroutines.launch
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 
 @Composable
 fun ExpandableBottomSheet(
@@ -69,6 +71,9 @@ fun ExpandableBottomSheet(
     
     // 记录拖动起始高度
     var dragStartHeight by remember { mutableStateOf(0f) }
+
+    // 搜索框输入状态
+    var searchQuery by remember { mutableStateOf("") }
     
     // 拖动结束后的处理
     fun snapToTarget() {
@@ -189,51 +194,10 @@ fun ExpandableBottomSheet(
                     modifier = Modifier
                         .fillMaxSize()
                         .alpha(progress)
-                        .padding(12.dp)
+                        .padding(horizontal = 20.dp, vertical = 18.dp)
+                        .background(Color.White.copy(alpha = blurAlpha))
                 ) {
-                    // 顶部：搜索框 + 头像
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // 搜索框
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(Color.White.copy(alpha = 0.6f))
-                                .padding(horizontal = 16.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Search,
-                                contentDescription = "Search",
-                                tint = Color(0xFF6B7280),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.width(12.dp))
-                        
-                        // 头像
-                        Image(
-                            painter = painterResource(id = R.drawable.user_avatar),
-                            contentDescription = "Profile",
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .border(2.dp, Color.White, CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // 拖动指示器（始终可拖动）
+                    // 拖动指示器（始终可拖动） 
                     Box(
                         modifier = Modifier
                             .width(80.dp)
@@ -270,12 +234,73 @@ fun ExpandableBottomSheet(
                     ) {
                         Box(
                             modifier = Modifier
-                                .width(40.dp)
-                                .height(4.dp)
+                                .width(80.dp)
+                                .height(2.dp)
                                 .clip(RoundedCornerShape(2.dp))
                                 .background(Color(0xFFD1D5DB))
                         )
                     }
+
+
+                    // 顶部：搜索框 + 头像
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(64.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 搜索框（样式同步登录页输入框）
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(56.dp),
+                            placeholder = {
+                                Text(
+                                    "Search posts",
+                                    color = Color(0xFFAAAAAA),
+                                    fontSize = 15.sp
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Filled.Search,
+                                    contentDescription = "Search",
+                                    tint = Color(0xFF9B8FD9).copy(alpha = 0.7f)
+                                )
+                            },
+                            shape = RoundedCornerShape(32.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = Color(0xFFE0E0E0),
+                                focusedBorderColor = Color(0xFFB5A8FF), // 淡紫色
+                                unfocusedContainerColor = Color.White.copy(alpha = 0.8f),
+                                focusedContainerColor = Color.White
+                            ),
+                            singleLine = true
+                        )
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        // 头像
+                        Image(
+                            painter = painterResource(id = R.drawable.user_avatar),
+                            contentDescription = "Profile",
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .border(
+                                    width = 2.dp,
+                                    color = Color(0xFFB0B0B0), // 柔和浅灰色边框
+                                    shape = CircleShape
+                                ),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    
+                    // Spacer(modifier = Modifier.height(8.dp))
+                    
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
@@ -284,7 +309,7 @@ fun ExpandableBottomSheet(
                         text = "POSTS",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = Color(0xFF1C1B1F)
                     )
                     
                     Spacer(modifier = Modifier.height(16.dp))
