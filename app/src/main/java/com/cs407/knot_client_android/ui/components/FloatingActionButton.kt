@@ -84,7 +84,7 @@ fun FloatingActionButton(
                         .createBlurEffect(40f, 40f, Shader.TileMode.CLAMP)
                         .asComposeRenderEffect()
                 }
-                .background(Color.White.copy(alpha = 0.8f))
+                .background(Color.White.copy(alpha = 0.65f))
         )
         
         // 主按钮

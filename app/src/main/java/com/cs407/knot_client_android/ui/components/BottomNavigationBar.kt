@@ -56,7 +56,7 @@ fun BottomNavigationBar(
                         .createBlurEffect(40f, 40f, Shader.TileMode.CLAMP)
                         .asComposeRenderEffect()
                 }
-                .background(Color.White.copy(alpha = 0.6f))
+                .background(Color.White.copy(alpha = 0.1f))
         )
         
         // 主容器 (带边框和半透明背景)
