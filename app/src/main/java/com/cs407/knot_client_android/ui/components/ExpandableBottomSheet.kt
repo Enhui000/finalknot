@@ -87,7 +87,7 @@ fun ExpandableBottomSheet(
             val snapPoints = listOf(
                 collapsedHeight.value,      // 64dp
                 expandedHeight.value,        // 50%
-                maxExpandedHeight.value      // 80%
+                maxExpandedHeight.value      // 93%
             )
             
             // 找到最接近的吸附点
@@ -112,8 +112,8 @@ fun ExpandableBottomSheet(
         val currentCornerRadius = 44.dp + 16.dp * progress
         
         // 毛玻璃背景层 - Android 原生系统级模糊
-        // 动态透明度：收起时 0.6，展开时 0.9
-        val blurAlpha = 0.6f + 0.3f * progress
+        // 动态透明度：收起时 0.5，展开时 0.9
+        val blurAlpha = 0.5f + 0.4f * progress
         
         Box(
             modifier = Modifier
@@ -197,7 +197,7 @@ fun ExpandableBottomSheet(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
                         )
-                        .padding(horizontal = 16.dp, vertical = 20.dp)
+                        .padding(horizontal = 18.dp, vertical = 18.dp)
                         .background(Color(0xFFF8F6F4).copy(alpha = blurAlpha))
                 ) {
                     // 拖动指示器（始终可拖动） 
