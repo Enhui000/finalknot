@@ -16,6 +16,7 @@ import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
 import com.cs407.knot_client_android.ui.components.BottomNavigationBar
 import com.cs407.knot_client_android.ui.components.NavTab
+import com.cs407.knot_client_android.navigation.Screen
 
 @Composable
 fun MapScreen(
@@ -56,7 +57,20 @@ fun MapScreen(
         // 底部导航栏 - 绝对定位在左下角，贴近设备圆角
         BottomNavigationBar(
             selectedTab = selectedTab,
-            onTabSelected = { selectedTab = it },
+            onTabSelected = { tab ->
+                selectedTab = tab
+                when (tab) {
+                    NavTab.MAP -> {
+                        // 已经在 Map 页面，不需要导航
+                    }
+                    NavTab.CHAT -> {
+                        navController.navigate(Screen.Chat.route)
+                    }
+                    NavTab.PROFILE -> {
+                        navController.navigate(Screen.Profile.route)
+                    }
+                }
+            },
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = 30.dp, bottom = 30.dp)

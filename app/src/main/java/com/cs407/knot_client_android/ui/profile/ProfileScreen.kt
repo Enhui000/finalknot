@@ -15,6 +15,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.cs407.knot_client_android.ui.components.BottomNavigationBar
 import com.cs407.knot_client_android.ui.components.NavTab
+import com.cs407.knot_client_android.navigation.Screen
 
 @Composable
 fun ProfileScreen(
@@ -40,10 +41,23 @@ fun ProfileScreen(
         // 底部导航栏 - 绝对定位在左下角，贴近设备圆角
         BottomNavigationBar(
             selectedTab = selectedTab,
-            onTabSelected = { selectedTab = it },
+            onTabSelected = { tab ->
+                selectedTab = tab
+                when (tab) {
+                    NavTab.MAP -> {
+                        navController.navigate(Screen.Map.route)
+                    }
+                    NavTab.CHAT -> {
+                        navController.navigate(Screen.Chat.route)
+                    }
+                    NavTab.PROFILE -> {
+                        // 已经在 Profile 页面，不需要导航
+                    }
+                }
+            },
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 20.dp, bottom = 16.dp)
+                .padding(start = 30.dp, bottom = 30.dp)
         )
     }
 }
