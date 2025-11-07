@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -85,7 +86,7 @@ fun MainScreen(
         FloatingActionButton(
             icon = when (selectedTab) {
                 NavTab.MAP -> Icons.Filled.Add // 地图页面：添加按钮
-                NavTab.CHAT -> Icons.Filled.Search // 聊天页面：搜索按钮
+                NavTab.CHAT -> Icons.Filled.Person // 聊天页面：搜索按钮
                 NavTab.PROFILE -> null // 个人资料页面：不显示
             },
             onClick = {
