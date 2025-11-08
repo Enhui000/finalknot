@@ -46,6 +46,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.cs407.knot_client_android.R
 import com.cs407.knot_client_android.data.api.MapboxGeocodingApi
+import com.cs407.knot_client_android.data.local.MapPreferences
 import com.cs407.knot_client_android.utils.LocationManager
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
@@ -68,6 +69,7 @@ fun MapScreen(
 ) {
     val context = LocalContext.current
     val locationManager = remember { LocationManager(context) }
+    val mapPreferences = remember { MapPreferences(context) }
     val scope = rememberCoroutineScope()
     
     // 位置状态
@@ -82,11 +84,14 @@ fun MapScreen(
     // 用于节流的 Job
     var geocodingJob by remember { mutableStateOf<Job?>(null) }
     
-    // 地图视口状态
+    // 地图视口状态 - 使用上次保存的位置
     val mapViewportState = rememberMapViewportState {
         setCameraOptions {
-            zoom(13.0)
-            center(Point.fromLngLat(-89.4, 43.07)) // 默认麦迪逊坐标
+            zoom(mapPreferences.getLastZoom())
+            center(Point.fromLngLat(
+                mapPreferences.getLastLongitude(),
+                mapPreferences.getLastLatitude()
+            ))
             pitch(0.0)
             bearing(0.0)
         }
@@ -157,7 +162,7 @@ fun MapScreen(
         }
     }
     
-    // 监听地图中心和缩放变化，获取中心点地名
+    // 监听地图中心和缩放变化，获取中心点地名 + 保存位置
     LaunchedEffect(mapViewportState.cameraState) {
         val zoom = mapViewportState.cameraState?.zoom ?: return@LaunchedEffect
         val center = mapViewportState.cameraState?.center ?: return@LaunchedEffect
@@ -165,12 +170,20 @@ fun MapScreen(
         // 取消之前的请求（节流）
         geocodingJob?.cancel()
         
-        // 只在 zoom > 12 时显示地名
-        if (zoom > 12.0) {
-            // 延迟 800ms 后再执行（用户停止拖动后才请求）
-            geocodingJob = launch {
-                delay(800)
-                
+        // 启动新的任务
+        geocodingJob = launch {
+            // 延迟 800ms 后执行（用户停止拖动后才执行）
+            delay(800)
+            
+            // 保存当前地图位置
+            mapPreferences.saveMapPosition(
+                latitude = center.latitude(),
+                longitude = center.longitude(),
+                zoom = zoom
+            )
+            
+            // 只在 zoom > 12 时显示地名
+            if (zoom > 12.0) {
                 try {
                     // 执行反向地理编码
                     val response = geocodingApi.reverseGeocode(
@@ -192,10 +205,10 @@ fun MapScreen(
                     e.printStackTrace()
                     centerLocationName = null
                 }
+            } else {
+                // zoom <= 12 时隐藏地名
+                centerLocationName = null
             }
-        } else {
-            // zoom <= 12 时隐藏地名
-            centerLocationName = null
         }
     }
     
