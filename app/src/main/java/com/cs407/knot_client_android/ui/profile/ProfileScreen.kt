@@ -114,60 +114,112 @@ fun ProfileScreen(
         ) {
             Spacer(modifier = Modifier.height(50.dp))
             
-            // Edit 按钮 - 右对齐，带动画
-            val interactionSource = remember { MutableInteractionSource() }
-            val isPressed by interactionSource.collectIsPressedAsState()
-            val scale = remember { Animatable(1f) }
-            
-            LaunchedEffect(isPressed) {
-                if (isPressed) {
-                    // 按下：快速放大
-                    scale.animateTo(
-                        targetValue = 1.2f,
-                        animationSpec = tween(
-                            durationMillis = 170,
-                            easing = LinearOutSlowInEasing
+            // 按钮行 - Logout 左对齐，Edit 右对齐
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(0.90f)
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Logout 按钮 - 左对齐，带动画
+                val logoutInteractionSource = remember { MutableInteractionSource() }
+                val logoutIsPressed by logoutInteractionSource.collectIsPressedAsState()
+                val logoutScale = remember { Animatable(1f) }
+                
+                LaunchedEffect(logoutIsPressed) {
+                    if (logoutIsPressed) {
+                        logoutScale.animateTo(
+                            targetValue = 1.2f,
+                            animationSpec = tween(
+                                durationMillis = 170,
+                                easing = LinearOutSlowInEasing
+                            )
                         )
-                    )
-                } else {
-                    // 松手：先缩回一点再弹回
-                    scale.animateTo(
-                        targetValue = 0.88f,
-                        animationSpec = tween(
-                            durationMillis = 155,
-                            easing = FastOutLinearInEasing
+                    } else {
+                        logoutScale.animateTo(
+                            targetValue = 0.88f,
+                            animationSpec = tween(
+                                durationMillis = 155,
+                                easing = FastOutLinearInEasing
+                            )
                         )
-                    )
-                    scale.animateTo(
-                        targetValue = 1f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
+                        logoutScale.animateTo(
+                            targetValue = 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            )
                         )
+                    }
+                }
+                
+                Button(
+                    onClick = { /* TODO: 处理登出事件 */ },
+                    modifier = Modifier
+                        .scale(logoutScale.value),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White.copy(alpha = 0.45f)
+                    ),
+                    shape = RoundedCornerShape(42.dp),
+                    interactionSource = logoutInteractionSource
+                ) {
+                    Text(
+                        text = "Logout",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF444444)
                     )
                 }
-            }
-            
-            Button(
-                onClick = { /* TODO: 处理编辑事件 */ },
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .fillMaxWidth(0.90f)
-                    .wrapContentWidth(Alignment.End)
-                    .padding(end = 4.dp, top = 8.dp)
-                    .scale(scale.value),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White.copy(alpha = 0.24f)
-                ),
-                shape = RoundedCornerShape(42.dp),
-                interactionSource = interactionSource
-            ) {
-                Text(
-                    text = "Edit",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFF444444)
-                )
+                
+                // Edit 按钮 - 右对齐，带动画
+                val editInteractionSource = remember { MutableInteractionSource() }
+                val editIsPressed by editInteractionSource.collectIsPressedAsState()
+                val editScale = remember { Animatable(1f) }
+                
+                LaunchedEffect(editIsPressed) {
+                    if (editIsPressed) {
+                        editScale.animateTo(
+                            targetValue = 1.2f,
+                            animationSpec = tween(
+                                durationMillis = 170,
+                                easing = LinearOutSlowInEasing
+                            )
+                        )
+                    } else {
+                        editScale.animateTo(
+                            targetValue = 0.88f,
+                            animationSpec = tween(
+                                durationMillis = 155,
+                                easing = FastOutLinearInEasing
+                            )
+                        )
+                        editScale.animateTo(
+                            targetValue = 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            )
+                        )
+                    }
+                }
+                
+                Button(
+                    onClick = { /* TODO: 处理编辑事件 */ },
+                    modifier = Modifier
+                        .scale(editScale.value),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White.copy(alpha = 0.45f)
+                    ),
+                    shape = RoundedCornerShape(42.dp),
+                    interactionSource = editInteractionSource
+                ) {
+                    Text(
+                        text = "Edit",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF444444)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(25.dp))
@@ -199,14 +251,14 @@ fun ProfileScreen(
                 text = "User Name",
                 fontSize = 30.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF2D2D2D) // 深灰色，更好的对比度
+                color = Color(0xFF2D2D33)
             )
             Spacer(modifier = Modifier.height(4.dp))
             // 用户 message
             Text(
                 text = "You haven't set a status message yet!",
                 fontSize = 14.sp,
-                color = Color(0xFF5A5A5A) // 中等灰色
+                color = Color(0xFF5B5B65) // 中等灰色
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -216,7 +268,7 @@ fun ProfileScreen(
                 modifier = Modifier
                     .fillMaxWidth(0.90f)
                     .clip(RoundedCornerShape(42.dp))
-                    .background(Color.White.copy(alpha = 0.24f))
+                    .background(Color.White.copy(alpha = 0.45f))
                     .padding(10.dp)
             ) {
                 Column(
@@ -286,7 +338,7 @@ private fun UserInfoItem(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color(0xFF666666), // 可见的灰色
+            tint = Color(0xFF8E8E93), // 可见的灰色
             modifier = Modifier.size(28.dp) // 增大图标
         )
         
@@ -297,7 +349,7 @@ private fun UserInfoItem(
             text = label,
             fontSize = 18.sp, // 增大字体
             fontWeight = FontWeight.Medium,
-            color = Color(0xFF444444), // 可见的深灰色
+            color = Color(0xFF505058), // 可见的深灰色
             modifier = Modifier.weight(1f)
         )
         
@@ -306,7 +358,7 @@ private fun UserInfoItem(
             text = value,
             fontSize = 16.sp, // 增大字体
             fontWeight = FontWeight.Normal,
-            color = Color(0xFF666666) // 可见的灰色
+            color = Color(0xFF7B7D86) // 可见的灰色
         )
     }
 }
