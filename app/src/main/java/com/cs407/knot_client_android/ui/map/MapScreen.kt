@@ -125,10 +125,10 @@ fun MapScreen(
         // 显示当前位置信息（调试用）
         userLocation?.let { location ->
             Text(
-                text = "位置: ${location.latitude()}, ${location.longitude()}",
+                text = "location: ${location.latitude()}, ${location.longitude()}",
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(16.dp)
+                    .align(Alignment.TopStart)
+                    .padding(top = 52.dp, start = 12.dp)
             )
         }
     }
