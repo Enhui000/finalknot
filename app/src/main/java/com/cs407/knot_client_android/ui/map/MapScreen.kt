@@ -3,18 +3,26 @@ package com.cs407.knot_client_android.ui.map
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.magnifier
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
@@ -128,11 +136,11 @@ fun MapScreen(
         val zoom = mapViewportState.cameraState?.zoom ?: return@LaunchedEffect
         val center = mapViewportState.cameraState?.center ?: return@LaunchedEffect
         
+        // 取消之前的请求（节流）
+        geocodingJob?.cancel()
+        
         // 只在 zoom > 12 时显示地名
         if (zoom > 12.0) {
-            // 取消之前的请求（节流）
-            geocodingJob?.cancel()
-            
             // 延迟 800ms 后再执行（用户停止拖动后才请求）
             geocodingJob = launch {
                 delay(800)
@@ -187,89 +195,101 @@ fun MapScreen(
             }
         )
         
-        // 显示中心点地名（只在 zoom > 12 时显示）- 无背景，分两行
-        centerLocationName?.let { name ->
-            val lines = name.split("\n")
-            val mainName = lines.getOrNull(0)?.trim() ?: ""
-            val subName = lines.getOrNull(1)?.trim() ?: ""
-        
-            Column(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(top = 85.dp)
-                    .padding(start = 24.dp)
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.Start
-            ) {
-                // 主标题 - 粗体，大字号
-//                Text(
-//                    text = subName,
-//                    color = Color(0xFF222222),
-//                    fontSize = 37.sp,
-//                    fontWeight = FontWeight.Bold,
-//                    lineHeight = 26.sp,
-//                    textAlign = TextAlign.Center
-//                )
-                Text(
-                    text = subName,
-                    color = Color.White,
-                    fontSize = 37.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontFamily = FontFamily(Font(R.font.rubik_glitch_regular)),
-                    style = TextStyle(
-                        shadow = Shadow(
-                            color = Color.Black.copy(alpha = 0.8f),
-                            offset = Offset(2f, 2f),
-                            blurRadius = 8f
-                        )
-                    )
+        // 显示中心点地名（只在 zoom > 12 时显示）- 带优雅的进入和退出动画
+        AnimatedVisibility(
+            visible = centerLocationName != null,
+            enter = fadeIn(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
                 )
+            ) + scaleIn(
+                initialScale = 0.8f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            ),
+            exit = fadeOut(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ) + scaleOut(
+                targetScale = 1.2f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ),
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 85.dp, start = 24.dp)
+        ) {
+            centerLocationName?.let { name ->
+                val lines = name.split("\n")
+                val mainName = lines.getOrNull(0)?.trim() ?: ""
+                val subName = lines.getOrNull(1)?.trim() ?: ""
 
-                Spacer(modifier = Modifier.padding(5.dp))
-                // 次标题 - 小一号，灰一点
-//                if (subName.isNotEmpty()) {
-//                    Text(
-//                        text = mainName,
-//                        color = Color(0x99333333), // 60% 深灰
-//                        fontSize = 20.sp,
-//                        fontWeight = FontWeight.Medium,
-//                        lineHeight = 16.sp,
-//                        textAlign = TextAlign.Center
-//                    )
-//                }
-                Text(
-                    text = mainName,
-                    color = Color(0xFFEEEEEE),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Medium,
-                    fontFamily = FontFamily(Font(R.font.poppins_medium)),
-                    style = TextStyle(
-                        shadow = Shadow(
-                            color = Color.Black.copy(alpha = 0.6f),
-                            offset = Offset(1f, 1f),
-                            blurRadius = 4f
+                Column(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    // 使用 Box 让阴影和主文字重叠
+                    Box {
+                        // 阴影文字
+                        Text(
+                            text = subName,
+                            modifier = Modifier
+                                .offset(x = 2.dp, y = 2.dp)
+                                .alpha(0.6f),
+                            color = Color.White,
+                            fontSize = 38.sp,
+                            fontWeight = FontWeight.ExtraBold
                         )
-                    )
-                )
+
+                        // 主文字
+                        Text(
+                            text = subName,
+                            color = Color.Black.copy(alpha = 0.8f),
+                            fontSize = 38.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.padding(5.dp))
+                    // 次标题 - 小一号，灰一点
+                    if (subName.isNotEmpty()) {
+                        Text(
+                            text = mainName,
+                            color = Color(0x99333333), // 60% 深灰
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Medium,
+                            lineHeight = 16.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
             }
         }
         
-        // 显示当前位置信息（调试用）- 白色半透明背景
-        userLocation?.let { location ->
-            Text(
-                text = "位置: ${location.latitude()}, ${location.longitude()}",
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(16.dp)
-                    .background(
-                        color = Color.White.copy(alpha = 0.9f),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                color = Color.Black,
-                fontSize = 12.sp
-            )
-        }
+        // DEBUG: DO NOT DELETE THIS CODE
+        // // 显示当前位置信息（调试用）- 白色半透明背景
+        // userLocation?.let { location ->
+        //     Text(
+        //         text = "位置: ${location.latitude()}, ${location.longitude()}",
+        //         modifier = Modifier
+        //             .align(Alignment.TopCenter)
+        //             .padding(16.dp)
+        //             .background(
+        //                 color = Color.White.copy(alpha = 0.9f),
+        //                 shape = RoundedCornerShape(8.dp)
+        //             )
+        //             .padding(horizontal = 12.dp, vertical = 6.dp),
+        //         color = Color.Black,
+        //         fontSize = 12.sp
+        //     )
+        // }
     }
 }
 
