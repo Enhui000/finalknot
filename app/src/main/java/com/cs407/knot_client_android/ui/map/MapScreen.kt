@@ -4,7 +4,11 @@ import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -27,6 +31,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
@@ -221,13 +227,62 @@ fun MapScreen(
                         geometry(location)
                     }
                 ) {
-                    // 漂亮的位置指示器 - 蓝色圆点带白色边框
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .border(3.dp, Color.White, CircleShape)
-                            .background(Color(0xFF4A90E2), CircleShape)
+                    // 创建无限循环的呼吸动画
+                    val infiniteTransition = rememberInfiniteTransition(label = "breathe")
+                    
+                    // 微妙的缩放动画 (0.90 到 1.10)
+                    val scale by infiniteTransition.animateFloat(
+                        initialValue = 0.90f,
+                        targetValue = 1.05f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1500), // 1.5秒一个循环
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "scale"
                     )
+                    
+                    // 外圈扩散效果的透明度
+                    val outerAlpha by infiniteTransition.animateFloat(
+                        initialValue = 0.4f,
+                        targetValue = 0.0f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1500),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "alpha"
+                    )
+                    
+                    // 外圈扩散效果的缩放
+                    val outerScale by infiniteTransition.animateFloat(
+                        initialValue = 1.0f,
+                        targetValue = 1.8f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1500),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "outerScale"
+                    )
+                    
+                    Box(contentAlignment = Alignment.Center) {
+                        // 外圈扩散效果（微妙的）
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(42.dp))
+                                .scale(outerScale)
+                                .alpha(outerAlpha)
+                                .background(Color(0xFF4A90E2).copy(alpha = 0.3f), CircleShape)
+                        )
+                        
+                        // 主要的位置指示器 - 蓝色圆点带白色边框
+                        Box(
+                            modifier = Modifier
+                                .size(27.dp)
+                                .scale(scale)
+                                .border(4.dp, Color.White, CircleShape)
+                                .background(Color(0xFF4A90E2), CircleShape)
+                        )
+                    }
                 }
             }
         }
