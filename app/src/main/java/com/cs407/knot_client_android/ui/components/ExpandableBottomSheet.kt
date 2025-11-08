@@ -345,15 +345,19 @@ fun ExpandableBottomSheet(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // 副标题（Slogan）
-                        Text(
-                            text = "Share your little footprints with close friends 🌍",
-                            fontSize = 14.sp,
-                            color = Color(0xFF9B9B9B),
-                            fontWeight = FontWeight.Medium
-                        )
+                        if (progress > 0.76f) {
+                            // 副标题（Slogan）
+                            Text(
+                                text = "Share your little footprints with close friends 🌍",
+                                fontSize = 14.sp,
+                                color = Color(0xFF9B9B9B),
+                                fontWeight = FontWeight.Medium
+                            )
+    
+                            Spacer(modifier = Modifier.height(24.dp))
 
-                        Spacer(modifier = Modifier.height(24.dp))
+
+                        }
 
                     }
                 }
