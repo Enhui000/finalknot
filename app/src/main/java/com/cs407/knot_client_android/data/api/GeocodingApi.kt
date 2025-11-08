@@ -1,4 +1,4 @@
-package com.cs407.knot_client_android.utils
+package com.cs407.knot_client_android.data.api
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory

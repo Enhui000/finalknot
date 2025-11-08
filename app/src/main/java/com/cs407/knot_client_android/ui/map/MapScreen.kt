@@ -36,8 +36,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.cs407.knot_client_android.R
+import com.cs407.knot_client_android.data.api.MapboxGeocodingApi
 import com.cs407.knot_client_android.utils.LocationManager
-import com.cs407.knot_client_android.utils.MapboxGeocodingApi
 import com.mapbox.geojson.Point
 import com.mapbox.maps.MapInitOptions
 import com.mapbox.maps.Style
