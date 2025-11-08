@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import com.cs407.knot_client_android.R
+import com.cs407.knot_client_android.navigation.Screen
 import android.graphics.RenderEffect
 import android.graphics.Shader  
 
@@ -182,7 +183,10 @@ fun ProfileScreen(
                     
                     // 主按钮层 - 在毛玻璃背景之上，按中心放大
                     Button(
-                        onClick = { /* TODO: 处理登出事件 */ },
+                        onClick = { 
+                            // 暂时跳转至登录页面
+                            navController.navigate(Screen.Login.route)
+                         },
                         modifier = Modifier
                             .scale(logoutScale.value),
                         colors = ButtonDefaults.buttonColors(
