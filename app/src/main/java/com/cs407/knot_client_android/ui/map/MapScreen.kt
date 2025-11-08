@@ -12,12 +12,15 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -43,7 +46,10 @@ import com.mapbox.maps.MapInitOptions
 import com.mapbox.maps.Style
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
+import com.mapbox.maps.extension.compose.annotation.ViewAnnotation
 import com.mapbox.maps.extension.compose.style.MapStyle
+import com.mapbox.maps.viewannotation.geometry
+import com.mapbox.maps.viewannotation.viewAnnotationOptions
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -194,7 +200,24 @@ fun MapScreen(
             attribution = {
                 // 隐藏 attribution
             }
-        )
+        ) {
+            // 用户位置指示器
+            userLocation?.let { location ->
+                ViewAnnotation(
+                    options = viewAnnotationOptions {
+                        geometry(location)
+                    }
+                ) {
+                    // 漂亮的位置指示器 - 蓝色圆点带白色边框
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .border(3.dp, Color.White, CircleShape)
+                            .background(Color(0xFF4A90E2), CircleShape)
+                    )
+                }
+            }
+        }
         
         // 显示中心点地名（只在 zoom > 12 时显示）- 带优雅的进入和退出动画
         // 使用 remember 保存最后一个非空的地名，用于 exit 动画
