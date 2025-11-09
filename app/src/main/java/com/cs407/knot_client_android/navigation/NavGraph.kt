@@ -10,6 +10,7 @@ import androidx.navigation.navArgument
 import com.cs407.knot_client_android.ui.login.LoginScreen
 import com.cs407.knot_client_android.ui.main.MainScreen
 import com.cs407.knot_client_android.ui.friend.FriendScreen
+import com.cs407.knot_client_android.ui.debug.DebugScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -17,6 +18,7 @@ sealed class Screen(val route: String) {
         fun createRoute(selectedTab: String = "MAP") = "main/$selectedTab"
     }
     object Friend : Screen("friend")
+    object Debug : Screen("debug")
 }
 
 // 主要的 Navigation 设置函数
@@ -48,6 +50,9 @@ fun SetupNavGraph(
         }
         composable(route = Screen.Friend.route) {
             FriendScreen(navController = navController)
+        }
+        composable(route = Screen.Debug.route) {
+            DebugScreen(navController = navController)
         }
     }
 }

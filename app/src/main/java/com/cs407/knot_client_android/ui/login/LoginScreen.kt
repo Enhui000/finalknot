@@ -163,6 +163,23 @@ fun LoginScreen(
             ),
         contentAlignment = BiasAlignment(0f, -0.15f) // 稍微往上偏移，视觉中心
     ) {
+        // DEBUG PAGE BUTTON
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 68.dp, end = 18.dp)
+        ) {
+            Button(
+                onClick = { navController.navigate(Screen.Debug.route) }
+            ) {
+                Text(
+                    text = "ws调试",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White
+                )
+            }
+        }
         Column(
             modifier = Modifier
                 .padding(horizontal = 40.dp)
