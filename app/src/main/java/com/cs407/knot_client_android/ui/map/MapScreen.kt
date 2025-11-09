@@ -68,6 +68,9 @@ import androidx.navigation.compose.rememberNavController
 import com.cs407.knot_client_android.R
 import com.cs407.knot_client_android.data.api.MapboxGeocodingApi
 import com.cs407.knot_client_android.data.local.MapPreferences
+import com.cs407.knot_client_android.data.model.MapPost
+import com.cs407.knot_client_android.data.model.PostType
+import com.cs407.knot_client_android.ui.components.MapMarker
 import com.cs407.knot_client_android.utils.LocationManager
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
@@ -97,6 +100,156 @@ fun MapScreen(
     var userLocation by remember { mutableStateOf<Point?>(null) }
     var hasPermission by remember { mutableStateOf(locationManager.hasLocationPermission()) }
     var centerLocationName by remember { mutableStateOf<String?>(null) }
+    
+    // 假数据：多个地图帖子（在 Mountain View 区域）
+    val mockMapPosts = remember {
+        listOf(
+            MapPost(
+                mapPostId = 1,
+                convId = 101,
+                creatorId = 1001,
+                title = "Best Coffee ☕",
+                description = "Amazing latte art and cozy atmosphere!",
+                mediaJson = listOf("url1", "url2"),
+                locLat = 37.422,
+                locLng = -122.084,
+                locName = "Google Play Store",
+                geohash = "9q9hvnf",
+                viewCount = 156,
+                likeCount = 42,
+                commentCount = 8,
+                status = 1,
+                createdAt = "2024-11-09T10:30:00Z",
+                postType = PostType.ALL
+            ),
+            MapPost(
+                mapPostId = 2,
+                convId = 102,
+                creatorId = 1002,
+                title = "Tech Meetup 🚀",
+                description = "Weekly tech talks and networking",
+                mediaJson = null,
+                locLat = 37.425,
+                locLng = -122.088,
+                locName = "Mountain View Library",
+                geohash = "9q9hvng",
+                viewCount = 89,
+                likeCount = 27,
+                commentCount = 15,
+                status = 1,
+                createdAt = "2024-11-09T14:15:00Z",
+                postType = PostType.REQUEST
+            ),
+            MapPost(
+                mapPostId = 3,
+                convId = 103,
+                creatorId = 1003,
+                title = "Yoga Class 🧘",
+                description = "Morning yoga sessions every weekend",
+                mediaJson = listOf("url3"),
+                locLat = 37.427,
+                locLng = -122.086,
+                locName = "Shoreline Park",
+                geohash = "9q9hvnh",
+                viewCount = 234,
+                likeCount = 68,
+                commentCount = 22,
+                status = 1,
+                createdAt = "2024-11-09T08:00:00Z",
+                postType = PostType.ALL
+            ),
+            MapPost(
+                mapPostId = 4,
+                convId = 104,
+                creatorId = 1004,
+                title = "Food Truck 🌮",
+                description = "Best tacos in town!",
+                mediaJson = null,
+                locLat = 37.423,
+                locLng = -122.090,
+                locName = "Castro Street",
+                geohash = "9q9hvne",
+                viewCount = 312,
+                likeCount = 95,
+                commentCount = 41,
+                status = 1,
+                createdAt = "2024-11-09T12:00:00Z",
+                postType = PostType.ALL
+            ),
+            MapPost(
+                mapPostId = 5,
+                convId = 105,
+                creatorId = 1005,
+                title = "Book Club 📚",
+                description = "Monthly book discussions",
+                mediaJson = listOf("url4", "url5"),
+                locLat = 37.420,
+                locLng = -122.082,
+                locName = "Public Library",
+                geohash = "9q9hvnc",
+                viewCount = 145,
+                likeCount = 38,
+                commentCount = 19,
+                status = 1,
+                createdAt = "2024-11-09T16:30:00Z",
+                postType = PostType.REQUEST
+            ),
+            MapPost(
+                mapPostId = 6,
+                convId = 106,
+                creatorId = 1006,
+                title = "Art Gallery 🎨",
+                description = "Local artists exhibition",
+                mediaJson = null,
+                locLat = 37.428,
+                locLng = -122.089,
+                locName = "Art Center",
+                geohash = "9q9hvni",
+                viewCount = 198,
+                likeCount = 52,
+                commentCount = 28,
+                status = 1,
+                createdAt = "2024-11-09T13:45:00Z",
+                postType = PostType.ALL
+            ),
+            MapPost(
+                mapPostId = 7,
+                convId = 107,
+                creatorId = 1007,
+                title = "Bike Repair 🚴",
+                description = "Free bike maintenance workshop",
+                mediaJson = listOf("url6"),
+                locLat = 37.419,
+                locLng = -122.085,
+                locName = "Community Center",
+                geohash = "9q9hvnb",
+                viewCount = 167,
+                likeCount = 44,
+                commentCount = 13,
+                status = 1,
+                createdAt = "2024-11-09T09:15:00Z",
+                postType = PostType.REQUEST
+            ),
+            MapPost(
+                mapPostId = 8,
+                convId = 108,
+                creatorId = 1008,
+                title = "Live Music 🎵",
+                description = "Jazz night every Friday",
+                mediaJson = null,
+                locLat = 37.426,
+                locLng = -122.091,
+                locName = "Music Venue",
+                geohash = "9q9hvnj",
+                viewCount = 276,
+                likeCount = 82,
+                commentCount = 35,
+                status = 1,
+                createdAt = "2024-11-09T18:00:00Z",
+                postType = PostType.ALL
+            )
+        )
+    }
     
     // 创建 Geocoding API (用于反向地理编码)
     val mapboxToken = context.getString(R.string.mapbox_access_token)
@@ -317,6 +470,23 @@ fun MapScreen(
                                 .background(Color(0xFF4A90E2), CircleShape)
                         )
                     }
+                }
+            }
+            
+            // 显示地图帖子 Markers
+            mockMapPosts.forEach { post ->
+                ViewAnnotation(
+                    options = viewAnnotationOptions {
+                        geometry(Point.fromLngLat(post.locLng, post.locLat))
+                    }
+                ) {
+                    MapMarker(
+                        post = post,
+                        onClick = {
+                            // TODO: 点击 marker 后打开帖子详情
+                            // navController.navigate("post_detail/${post.mapPostId}")
+                        }
+                    )
                 }
             }
         }

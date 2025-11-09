@@ -14,10 +14,10 @@ class MapPreferences(context: Context) {
         private const val KEY_LAST_LONGITUDE = "last_longitude"
         private const val KEY_LAST_ZOOM = "last_zoom"
         
-        // 默认位置：麦迪逊
-        private const val DEFAULT_LATITUDE = 43.07
-        private const val DEFAULT_LONGITUDE = -89.4
-        private const val DEFAULT_ZOOM = 13.0
+        // 默认位置：Mountain View (假数据中心区域)
+        private const val DEFAULT_LATITUDE = 37.424
+        private const val DEFAULT_LONGITUDE = -122.087
+        private const val DEFAULT_ZOOM = 7.0 // 更大视野，能看到整个区域
     }
     
     fun saveMapPosition(latitude: Double, longitude: Double, zoom: Double) {
