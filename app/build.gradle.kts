@@ -64,7 +64,8 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
     // Coroutines support for Play Services
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
-    
+    implementation(libs.androidx.compose.foundation)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

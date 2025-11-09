@@ -1,9 +1,14 @@
 package com.cs407.knot_client_android.ui.map
 
 import android.Manifest
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
@@ -17,23 +22,34 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -42,6 +58,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.outlined.Place
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.cs407.knot_client_android.R
@@ -379,6 +398,123 @@ fun MapScreen(
                         fontWeight = FontWeight.Medium,
                         lineHeight = 16.sp,
                         textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+
+
+        // 在地图右上角显示一个按钮，点击之后可以重定向到用户当前位置
+        // 模仿 FloatingActionButton 的样式和动画
+        if (userLocation != null) {
+            val interactionSource = remember { MutableInteractionSource() }
+            val isPressed by interactionSource.collectIsPressedAsState()
+            
+            // Apple-style 双阶段弹性动画
+            val scale = remember { Animatable(1f) }
+            
+            LaunchedEffect(isPressed) {
+                if (isPressed) {
+                    // 按下：快速放大一点点
+                    scale.animateTo(
+                        targetValue = 1.2f,
+                        animationSpec = tween(
+                            durationMillis = 170,
+                            easing = LinearOutSlowInEasing
+                        )
+                    )
+                } else {
+                    // 松手：先缩回一点再弹回 1
+                    scale.animateTo(
+                        targetValue = 0.88f,
+                        animationSpec = tween(
+                            durationMillis = 155,
+                            easing = FastOutLinearInEasing
+                        )
+                    )
+                    // 然后自然回弹到 1
+                    scale.animateTo(
+                        targetValue = 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
+                }
+            }
+            
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 68.dp, end = 18.dp)
+            ) {
+                // 毛玻璃背景层 - Android 原生系统级模糊
+                Box(
+                    modifier = Modifier
+                        // .size(45.dp)
+                        .height(70.dp)
+                        .width(40.dp)
+                        .clip(CircleShape)
+                        .graphicsLayer {
+                            renderEffect = RenderEffect
+                                .createBlurEffect(40f, 40f, Shader.TileMode.CLAMP)
+                                .asComposeRenderEffect()
+                        }
+                        .background(Color.White.copy(alpha = 0.65f))
+                )
+                
+                // 主按钮
+                Box(
+                    modifier = Modifier
+                        // .size(45.dp)
+                        .height(70.dp)
+                        .width(40.dp)
+                        .scale(scale.value)
+                        .border(
+                            width = 0.5.dp,
+                            color = Color(0xFFE5E7EB).copy(alpha = 0.6f),
+                            shape = CircleShape
+                        )
+                        .clip(CircleShape)
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.3f),
+                                    Color.White.copy(alpha = 0.2f)
+                                )
+                            )
+                        )
+                        .clickable(
+                            onClick = {
+                                scope.launch {
+                                    userLocation?.let { location ->
+                                        mapViewportState.easeTo(
+                                            cameraOptions = CameraOptions.Builder()
+                                                .center(location)
+                                                .zoom(15.0)
+                                                .build(),
+                                            animationOptions = MapAnimationOptions.mapAnimationOptions {
+                                                duration(2500) // 2.5秒的平滑动画
+                                            }
+                                        )
+                                    }
+                                }
+                            },
+                            indication = null,
+                            interactionSource = interactionSource
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.Send,
+                        contentDescription = "current location",
+                        modifier = Modifier
+                            .size(20.dp)
+                            .rotate(-45f), // 旋转 45 度
+                        tint = if (isPressed)
+                            Color(0xFF636EF1) // 按下时：蓝紫色
+                        else
+                            Color(0xFF6B7280) // 正常时：gray-600
                     )
                 }
             }
