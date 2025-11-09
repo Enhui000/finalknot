@@ -11,8 +11,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
 import com.cs407.knot_client_android.ui.chat.ChatScreen
+import com.cs407.knot_client_android.ui.components.AddPlaceSheet
 import com.cs407.knot_client_android.ui.components.BottomNavigationBar
 import com.cs407.knot_client_android.ui.components.ExpandableBottomSheet
 import com.cs407.knot_client_android.ui.components.FloatingActionButton
@@ -42,6 +44,9 @@ fun MainScreen(
     
     // 展开进度（0f = 收起, 1f = 半展开, 2f = 全展开）
     var expandProgress by remember { mutableStateOf(0f) }
+    
+    // 控制 MapScreen 中 Add Sheet 的显示
+    var isAddSheetVisible by remember { mutableStateOf(false) }
     
     // 根据展开进度计算 padding：
     // 收起时 30dp，半展开时 8dp，全展开时 0dp
@@ -77,7 +82,7 @@ fun MainScreen(
                     else Modifier.alpha(0f)
                 )
         ) {
-            MapScreen(navController)
+            MapScreen(navController = navController)
         }
         
         // Chat 页面 - 永远存在，但可能不可见
@@ -101,6 +106,7 @@ fun MainScreen(
                 expandProgress = progress
             },
             modifier = Modifier
+                .zIndex(1f) // 设置较低的 z-index
                 .align(Alignment.BottomStart)
                 .padding(start = currentPadding, bottom = currentPadding)
         )
@@ -116,7 +122,8 @@ fun MainScreen(
             onClick = {
                 when (selectedTab) {
                     NavTab.MAP -> {
-                        // TODO: 添加新标记/地点
+                        // 打开 Add Sheet
+                        isAddSheetVisible = true
                     }
                     NavTab.CHAT -> {
                         // 跳转至好友页面
@@ -135,6 +142,15 @@ fun MainScreen(
                 .align(Alignment.BottomEnd)
                 .padding(end = currentPadding, bottom = currentPadding)
                 .alpha(1f - expandProgress) // 展开时淡出消失
+        )
+        
+        // Add Place Sheet - 覆盖在所有元素之上
+        AddPlaceSheet(
+            isVisible = isAddSheetVisible,
+            onDismiss = { isAddSheetVisible = false },
+            modifier = Modifier
+                .zIndex(100f) // 最高 z-index，覆盖所有元素
+                .align(Alignment.BottomCenter)
         )
     }
 }
