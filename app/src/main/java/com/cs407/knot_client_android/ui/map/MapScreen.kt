@@ -96,6 +96,14 @@ fun MapScreen(
     val mapPreferences = remember { MapPreferences(context) }
     val scope = rememberCoroutineScope()
     
+    // 🎬 进入动画状态
+    var isVisible by remember { mutableStateOf(false) }
+    var showMarkers by remember { mutableStateOf(false) }
+    val animatedScale = remember { Animatable(0.95f) }
+    val animatedAlpha = remember { Animatable(0f) }
+    val animatedOffsetY = remember { Animatable(30f) }
+    val markersAlpha = remember { Animatable(0f) }
+    
     // 位置状态
     var userLocation by remember { mutableStateOf<Point?>(null) }
     var hasPermission by remember { mutableStateOf(locationManager.hasLocationPermission()) }
@@ -271,6 +279,46 @@ fun MapScreen(
         }
     }
     
+    // 🎬 触发进入动画
+    LaunchedEffect(Unit) {
+        isVisible = true
+        // 同时启动三个动画
+        launch {
+            animatedScale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = 0.7f,
+                    stiffness = 300f
+                )
+            )
+        }
+        launch {
+            animatedAlpha.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 600, easing = FastOutLinearInEasing)
+            )
+        }
+        launch {
+            animatedOffsetY.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(
+                    dampingRatio = 0.8f,
+                    stiffness = 400f
+                )
+            )
+        }
+        
+        // 🎯 延迟 1 秒后显示 markers
+        launch {
+            kotlinx.coroutines.delay(1000)
+            showMarkers = true
+            markersAlpha.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 400, easing = FastOutLinearInEasing)
+            )
+        }
+    }
+    
     // 权限请求启动器
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -386,7 +434,13 @@ fun MapScreen(
         }
     }
     
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .scale(animatedScale.value)
+            .alpha(animatedAlpha.value)
+            .offset(y = animatedOffsetY.value.dp)
+    ) {
         // 地图内容 - 使用 MapStyle
         MapboxMap(
             modifier = Modifier.fillMaxSize(),
@@ -473,20 +527,24 @@ fun MapScreen(
                 }
             }
             
-            // 显示地图帖子 Markers
-            mockMapPosts.forEach { post ->
-                ViewAnnotation(
-                    options = viewAnnotationOptions {
-                        geometry(Point.fromLngLat(post.locLng, post.locLat))
-                    }
-                ) {
-                    MapMarker(
-                        post = post,
-                        onClick = {
-                            // TODO: 点击 marker 后打开帖子详情
-                            // navController.navigate("post_detail/${post.mapPostId}")
+            // 显示地图帖子 Markers - 延迟 1 秒后淡入显示
+            if (showMarkers) {
+                mockMapPosts.forEach { post ->
+                    ViewAnnotation(
+                        options = viewAnnotationOptions {
+                            geometry(Point.fromLngLat(post.locLng, post.locLat))
                         }
-                    )
+                    ) {
+                        Box(modifier = Modifier.alpha(markersAlpha.value)) {
+                            MapMarker(
+                                post = post,
+                                onClick = {
+                                    // TODO: 点击 marker 后打开帖子详情
+                                    // navController.navigate("post_detail/${post.mapPostId}")
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
