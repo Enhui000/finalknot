@@ -100,7 +100,9 @@ fun MapScreen(
     // 因为地图会在 MainScreen 加载时就开始初始化
     // 当用户看到时，地图已经准备好了
     var showMarkers by remember { mutableStateOf(false) }
-    val markersAlpha = remember { Animatable(0f) }
+    
+    // 为每个 marker 单独管理显示状态，用于动画（使用 Set 来追踪已显示的 marker）
+    var visibleMarkerIds by remember { mutableStateOf(setOf<Long>()) }
     
     // 位置状态
     var userLocation by remember { mutableStateOf<Point?>(null) }
@@ -277,15 +279,19 @@ fun MapScreen(
         }
     }
     
-    // ⚡ 延迟显示 markers（地图会在后台预加载，markers 稍后淡入）
+    // ⚡ 延迟显示 markers（地图会在后台预加载，markers 依次淡入）
     LaunchedEffect(Unit) {
         // 给地图一点时间完成初始化
         kotlinx.coroutines.delay(800)
         showMarkers = true
-        markersAlpha.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = 400, easing = FastOutLinearInEasing)
-        )
+        
+        // 依次显示每个 marker，带一点延迟
+        mockMapPosts.forEach { post ->
+            kotlinx.coroutines.delay(80L) // 每个 marker 间隔 80ms
+            visibleMarkerIds = visibleMarkerIds + post.mapPostId
+            println("🎯 Marker ${post.mapPostId} - ${post.title} added to visible list. Total: ${visibleMarkerIds.size}")
+        }
+        println("✅ All ${mockMapPosts.size} markers loaded!")
     }
     
     // 权限请求启动器
@@ -492,22 +498,42 @@ fun MapScreen(
                 }
             }
             
-            // 显示地图帖子 Markers - 延迟 1 秒后淡入显示
+            // 显示地图帖子 Markers - 每个 marker 依次弹出，带丝滑动画
             if (showMarkers) {
                 mockMapPosts.forEach { post ->
-                    ViewAnnotation(
-                        options = viewAnnotationOptions {
-                            geometry(Point.fromLngLat(post.locLng, post.locLat))
-                        }
-                    ) {
-                        Box(modifier = Modifier.alpha(markersAlpha.value)) {
-                            MapMarker(
-                                post = post,
-                                onClick = {
-                                    // TODO: 点击 marker 后打开帖子详情
-                                    // navController.navigate("post_detail/${post.mapPostId}")
-                                }
-                            )
+                    // 只渲染已经设置为可见的 markers
+                    if (visibleMarkerIds.contains(post.mapPostId)) {
+                        ViewAnnotation(
+                            options = viewAnnotationOptions {
+                                geometry(Point.fromLngLat(post.locLng, post.locLat))
+                            }
+                        ) {
+                            // 使用 scale 动画来实现进入效果
+                            val scale = remember { Animatable(0.7f) }
+                            
+                            LaunchedEffect(Unit) {
+                                scale.animateTo(
+                                    targetValue = 1f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessMedium
+                                    )
+                                )
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .scale(scale.value)
+                                    .alpha(scale.value)
+                            ) {
+                                MapMarker(
+                                    post = post,
+                                    onClick = {
+                                        // TODO: 点击 marker 后打开帖子详情
+                                        // navController.navigate("post_detail/${post.mapPostId}")
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -714,6 +740,21 @@ fun MapScreen(
                 }
             }
         }
+        
+        // DEBUG: 显示 marker 加载状态 DO NOT DELETE THIS CODE
+        // Text(
+        //     text = "Markers: ${visibleMarkerIds.size}/${mockMapPosts.size}",
+        //     modifier = Modifier
+        //         .align(Alignment.BottomStart)
+        //         .padding(16.dp)
+        //         .background(
+        //             color = Color.White.copy(alpha = 0.9f),
+        //             shape = RoundedCornerShape(8.dp)
+        //         )
+        //         .padding(horizontal = 12.dp, vertical = 6.dp),
+        //     color = Color.Black,
+        //     fontSize = 12.sp
+        // )
         
         // DEBUG: DO NOT DELETE THIS CODE
         // // 显示当前位置信息（调试用）- 白色半透明背景
