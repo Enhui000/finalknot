@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -24,6 +27,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.animation.core.Animatable
@@ -58,8 +63,18 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
-//import androidx.compose.material.icons.filled.RemoveRedEye
+//import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Icon
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -68,9 +83,8 @@ import com.cs407.knot_client_android.R
 import com.cs407.knot_client_android.navigation.Screen
 import android.graphics.RenderEffect
 import android.graphics.Shader
+import androidx.compose.material.icons.filled.Create
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileEditScreen(
@@ -84,9 +98,35 @@ fun ProfileEditScreen(
     val isLoading by profileVm.loading.collectAsState()
     val error by profileVm.error.collectAsState()
     
+    // 🎨 编辑状态
+    var nickname by remember { mutableStateOf("") }
+    var statusMessage by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf("") }
+    var birthdate by remember { mutableStateOf("") }
+    var privacyLevel by remember { mutableStateOf("PUBLIC") }
+    var discoverable by remember { mutableStateOf(true) }
+    
+    // Dropdown 状态
+    var genderExpanded by remember { mutableStateOf(false) }
+    var privacyExpanded by remember { mutableStateOf(false) }
+    
     // 页面首次显示时加载用户数据
     LaunchedEffect(Unit) {
         profileVm.loadUserSettings()
+    }
+    
+    // 当用户数据加载完成时，初始化编辑字段
+    LaunchedEffect(userSettings) {
+        userSettings?.let { settings ->
+            nickname = settings.nickname ?: ""
+            statusMessage = settings.statusMessage ?: ""
+            email = settings.email ?: ""
+            gender = settings.gender ?: ""
+            birthdate = settings.birthdate ?: ""
+            privacyLevel = settings.privacyLevel ?: "PUBLIC"
+            discoverable = settings.discoverable ?: true
+        }
     }
     
     // Snackbar 状态
@@ -299,10 +339,25 @@ fun ProfileEditScreen(
                     // 主按钮层 - 在毛玻璃背景之上，按中心放大
                     Button(
                         onClick = { 
-                            // TODO: 处理保存事件
-
-                            navController.navigate(Screen.Main.createRoute("PROFILE")) {
-                                popUpTo(Screen.Main.createRoute("PROFILE")) { inclusive = true }
+                            scope.launch {
+                                val success = profileVm.updateUserSettings(
+                                    nickname = nickname,
+                                    statusMessage = statusMessage,
+                                    email = email,
+                                    gender = gender,
+                                    birthdate = birthdate,
+                                    privacyLevel = privacyLevel,
+                                    discoverable = discoverable
+                                )
+                                
+                                if (success) {
+                                    snackbarHostState.showSnackbar("✅ Profile updated successfully")
+                                    navController.navigate(Screen.Main.createRoute("PROFILE")) {
+                                        popUpTo(Screen.Main.createRoute("PROFILE")) { inclusive = true }
+                                    }
+                                } else {
+                                    snackbarHostState.showSnackbar("❌ Failed to update profile")
+                                }
                             }
                         },
                         modifier = Modifier
@@ -323,61 +378,173 @@ fun ProfileEditScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(25.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             
+            // 头像 + 相机图标
             Box(
                 modifier = Modifier
-                    .size(180.dp)
-                    .clip(CircleShape)
-                    .border(width = 2.dp, color = Color.White.copy(alpha = 0.15f), shape = CircleShape)
-                    .padding(8.dp)
-                    .background(Color.White.copy(alpha = 0.15f)),
+                    .size(140.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // user avatar
-                Image(
-                    painter = painterResource(id = R.drawable.user_avatar),
-                    contentDescription = "Profile",
+                // 头像主体
+                Box(
                     modifier = Modifier
-                        .size(180.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
+                        .size(140.dp)
+                        .clip(CircleShape)
+                        .border(width = 3.dp, color = Color.White.copy(alpha = 0.3f), shape = CircleShape)
+                        .background(Color.White.copy(alpha = 0.15f))
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.user_avatar),
+                        contentDescription = "Profile Avatar",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                
+                // 📷 相机图标（右上角）
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .align(Alignment.TopEnd)
+                        .offset(x = 4.dp, y = (-4).dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF636EF1))
+                        .border(2.dp, Color.White, CircleShape)
+                        .clickable {
+                            // TODO: 处理头像上传
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Create,
+                        contentDescription = "Change Avatar",
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // 🧾 名称
+            // 提示文字
             Text(
-                text = userSettings?.nickname ?: "Loading...",
-                fontSize = 30.sp,
+                text = "Edit Profile",
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF2D2D33)
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            // 用户 message
-            Text(
-                text = userSettings?.statusMessage ?: "You haven't set a status message yet!",
-                fontSize = 14.sp,
-                color = Color(0xFF5B5B65) // 中等灰色
-            )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // 📱 信息卡片
-            Box(
+            // 📱 可滚动的编辑表单
+            Column(
                 modifier = Modifier
                     .fillMaxWidth(0.90f)
-                    .clip(RoundedCornerShape(42.dp))
-                    .background(Color.White.copy(alpha = 0.45f))
-                    .padding(10.dp)
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(text = "This is a Profile Edit page", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF444444))
+                // Nickname 输入框
+                EditField(
+                    icon = Icons.Default.Person,
+                    label = "Nickname",
+                    value = nickname,
+                    onValueChange = { nickname = it },
+                    placeholder = "Enter your nickname"
+                )
+                
+                // Status Message 输入框
+                EditField(
+                    icon = Icons.Default.Email,
+                    label = "Status Message",
+                    value = statusMessage,
+                    onValueChange = { statusMessage = it },
+                    placeholder = "What's on your mind?",
+                    maxLines = 2
+                )
+                
+                // Email 输入框
+                EditField(
+                    icon = Icons.Default.Email,
+                    label = "Email",
+                    value = email,
+                    onValueChange = { email = it },
+                    placeholder = "your.email@example.com"
+                )
+                
+                // Gender 下拉菜单
+                Box {
+                    EditFieldDropdown(
+                        icon = Icons.Default.Face,
+                        label = "Gender",
+                        value = gender.ifEmpty { "Not set" },
+                        onClick = { genderExpanded = true }
+                    )
+                    DropdownMenu(
+                        expanded = genderExpanded,
+                        onDismissRequest = { genderExpanded = false },
+                        shape = RoundedCornerShape(32.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    ) {
+                        listOf("MALE", "FEMALE").forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    gender = option
+                                    genderExpanded = false
+                                },
+                            )
+                        }
+                    }
                 }
-            
+                
+                // Birthday 输入框
+                EditField(
+                    icon = Icons.Default.DateRange,
+                    label = "Birthday",
+                    value = birthdate,
+                    onValueChange = { birthdate = it },
+                    placeholder = "YYYY-MM-DD"
+                )
+                
+                // Privacy Level 下拉菜单
+                Box {
+                    EditFieldDropdown(
+                        icon = Icons.Default.Lock,
+                        label = "Privacy Level",
+                        value = privacyLevel,
+                        onClick = { privacyExpanded = true }
+                    )
+                    DropdownMenu(
+                        expanded = privacyExpanded,
+                        onDismissRequest = { privacyExpanded = false },
+                        shape = RoundedCornerShape(32.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    ) {
+                        listOf("PUBLIC", "PRIVATE", "FRIENDS").forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    privacyLevel = option
+                                    privacyExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                
+                // Discoverable 开关
+                EditFieldSwitch(
+                    icon = Icons.Default.LocationOn,
+                    label = "Discoverable",
+                    checked = discoverable,
+                    onCheckedChange = { discoverable = it }
+                )
+                
+                Spacer(modifier = Modifier.height(40.dp))
             }
         }
         
@@ -399,9 +566,188 @@ fun ProfileEditScreen(
     }
 }
 
+// ===============================
+// 🎨 可复用的编辑字段组件
+// ===============================
+
+/**
+ * 普通文本输入框
+ */
+@Composable
+private fun EditField(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String = "",
+    maxLines: Int = 1
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // 标签
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color(0xFF636EF1),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = label,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF505058)
+            )
+        }
+        
+        // 输入框
+        TextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(placeholder, color = Color(0xFFAAAAAA)) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp)),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.White.copy(alpha = 0.7f),
+                unfocusedContainerColor = Color.White.copy(alpha = 0.5f),
+                disabledContainerColor = Color.White.copy(alpha = 0.3f),
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                focusedTextColor = Color(0xFF2D2D33),
+                unfocusedTextColor = Color(0xFF2D2D33)
+            ),
+            maxLines = maxLines,
+            singleLine = maxLines == 1
+        )
+    }
+}
+
+/**
+ * 下拉菜单字段（只读，点击显示下拉菜单）
+ */
+@Composable
+private fun EditFieldDropdown(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // 标签
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color(0xFF636EF1),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = label,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF505058)
+            )
+        }
+        
+        // 下拉框
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(32.dp))
+                .background(Color.White.copy(alpha = 0.5f))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = value,
+                    fontSize = 16.sp,
+                    color = Color(0xFF2D2D33)
+                )
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = "Dropdown",
+                    tint = Color(0xFF8E8E93)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 开关字段
+ */
+@Composable
+private fun EditFieldSwitch(
+    icon: ImageVector,
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(32.dp))
+            .background(Color.White.copy(alpha = 0.5f))
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color(0xFF636EF1),
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = label,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF505058)
+                )
+            }
+            
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = Color(0xFF636EF1),
+                    uncheckedThumbColor = Color.White,
+                    uncheckedTrackColor = Color(0xFFCCCCCC)
+                )
+            )
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun ProfileEditScreenPreview() {
     ProfileEditScreen(navController = rememberNavController())
 }
+
 

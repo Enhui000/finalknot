@@ -8,6 +8,7 @@ import com.cs407.knot_client_android.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.cs407.knot_client_android.data.model.request.UpdateUserSettingsRequest
 
 /**
  * Profile 页面 ViewModel
@@ -50,6 +51,29 @@ class ProfileViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun clearError() {
         _error.value = null
+    }
+
+    /**
+     * 更新用户设置
+     */
+    suspend fun updateUserSettings(nickname: String, statusMessage: String, email: String, gender: String, birthdate: String, privacyLevel: String, discoverable: Boolean): Boolean {
+        return try {
+            _loading.value = true
+            _error.value = null
+            
+            val request = UpdateUserSettingsRequest(nickname, statusMessage, email, gender, birthdate, privacyLevel, discoverable)
+            val response = repository.updateUserSettings(request)
+            
+            // 更新本地状态
+            _userSettings.value = response
+            
+            _loading.value = false
+            true
+        } catch (e: Exception) {
+            _error.value = e.message ?: "Failed to update user settings"
+            _loading.value = false
+            false
+        }
     }
 }
 
