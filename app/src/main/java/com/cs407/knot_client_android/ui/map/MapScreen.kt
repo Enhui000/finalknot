@@ -96,12 +96,10 @@ fun MapScreen(
     val mapPreferences = remember { MapPreferences(context) }
     val scope = rememberCoroutineScope()
     
-    // 🎬 进入动画状态
-    var isVisible by remember { mutableStateOf(false) }
+    // ⚡ 静态标志：地图直接显示，无动画
+    // 因为地图会在 MainScreen 加载时就开始初始化
+    // 当用户看到时，地图已经准备好了
     var showMarkers by remember { mutableStateOf(false) }
-    val animatedScale = remember { Animatable(0.95f) }
-    val animatedAlpha = remember { Animatable(0f) }
-    val animatedOffsetY = remember { Animatable(30f) }
     val markersAlpha = remember { Animatable(0f) }
     
     // 位置状态
@@ -279,44 +277,15 @@ fun MapScreen(
         }
     }
     
-    // 🎬 触发进入动画
+    // ⚡ 延迟显示 markers（地图会在后台预加载，markers 稍后淡入）
     LaunchedEffect(Unit) {
-        isVisible = true
-        // 同时启动三个动画
-        launch {
-            animatedScale.animateTo(
-                targetValue = 1f,
-                animationSpec = spring(
-                    dampingRatio = 0.7f,
-                    stiffness = 300f
-                )
-            )
-        }
-        launch {
-            animatedAlpha.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 600, easing = FastOutLinearInEasing)
-            )
-        }
-        launch {
-            animatedOffsetY.animateTo(
-                targetValue = 0f,
-                animationSpec = spring(
-                    dampingRatio = 0.8f,
-                    stiffness = 400f
-                )
-            )
-        }
-        
-        // 🎯 延迟 1 秒后显示 markers
-        launch {
-            kotlinx.coroutines.delay(1000)
-            showMarkers = true
-            markersAlpha.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 400, easing = FastOutLinearInEasing)
-            )
-        }
+        // 给地图一点时间完成初始化
+        kotlinx.coroutines.delay(800)
+        showMarkers = true
+        markersAlpha.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 400, easing = FastOutLinearInEasing)
+        )
     }
     
     // 权限请求启动器
@@ -434,13 +403,9 @@ fun MapScreen(
         }
     }
     
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .scale(animatedScale.value)
-            .alpha(animatedAlpha.value)
-            .offset(y = animatedOffsetY.value.dp)
-    ) {
+    // ⚡ 直接显示地图，无动画
+    // 地图会在 MainScreen 加载时就开始初始化
+    Box(modifier = Modifier.fillMaxSize()) {
         // 地图内容 - 使用 MapStyle
         MapboxMap(
             modifier = Modifier.fillMaxSize(),
