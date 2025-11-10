@@ -4,7 +4,7 @@ package com.cs407.knot_client_android.ui.login
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.cs407.knot_client_android.data.AuthRepository
+import com.cs407.knot_client_android.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 

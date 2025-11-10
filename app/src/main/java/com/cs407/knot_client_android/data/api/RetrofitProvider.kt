@@ -5,20 +5,40 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
+/**
+ * Retrofit 提供者
+ * 统一创建和配置 Retrofit 实例
+ */
 object RetrofitProvider {
-    fun createAuth(baseUrl: String): AuthApi {
+    /**
+     * 创建带日志的 OkHttpClient
+     */
+    private fun createLoggingClient(): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
-        val client = OkHttpClient.Builder()
+        return OkHttpClient.Builder()
             .addInterceptor(logging)
             .build()
+    }
 
+    /**
+     * 创建认证 API 服务
+     * @param baseUrl 后端地址，模拟器使用 http://10.0.2.2:8080
+     */
+    fun createAuthService(baseUrl: String): AuthApiService {
         return Retrofit.Builder()
-            .baseUrl(baseUrl) // 模拟器：http://10.0.2.2:8080
-            .client(client)
+            .baseUrl(baseUrl)
+            .client(createLoggingClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(AuthApi::class.java)
+            .create(AuthApiService::class.java)
+    }
+
+    /**
+     * 创建 Geocoding API 服务
+     */
+    fun createGeocodingService(): GeocodingApiService {
+        return GeocodingApiService.create()
     }
 }
