@@ -17,12 +17,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.Create
 import androidx.compose.material.icons.outlined.FavoriteBorder
 //import androidx.compose.material.icons.outlined.ChatBubbleOutline
 //import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,7 +82,6 @@ fun PostDetailSheet(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     
     // 状态管理
     var postDetail by remember { mutableStateOf<MapPostDetailResponse?>(null) }
@@ -239,8 +244,12 @@ private fun PostDetailSheetContent(
     var contentHeightPx by remember { mutableStateOf(0) }
     val contentHeight = with(density) { contentHeightPx.toDp() }
     
+    // 输入框状态
+    var commentText by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+    var shouldFocusInput by remember { mutableStateOf(false) }
+    
     // 两个高度状态：半展开(动态)、全展开(94%)
-    val collapsedHeight = 0.dp  // 完全收起时为 0
     // 半展开高度：内容高度 + padding，但不超过屏幕的 70%
     val halfExpandedHeight = remember(contentHeight) {
         if (contentHeight > 0.dp) {
@@ -311,6 +320,33 @@ private fun PostDetailSheetContent(
         }
     }
     
+    // 点击评论按钮的处理
+    fun onCommentClick() {
+        coroutineScope.launch {
+            // 如果不是全展开状态，先展开到全展开
+            if (animatedHeight.value < fullExpandedHeight.value) {
+                animatedHeight.animateTo(
+                    targetValue = fullExpandedHeight.value,
+                    animationSpec = spring(
+                        dampingRatio = 0.70f,
+                        stiffness = 120f
+                    )
+                )
+            }
+            // 设置标志以请求焦点
+            shouldFocusInput = true
+        }
+    }
+    
+    // 当需要聚焦输入框时，请求焦点
+    LaunchedEffect(shouldFocusInput) {
+        if (shouldFocusInput) {
+            kotlinx.coroutines.delay(300) // 等待动画完成
+            focusRequester.requestFocus()
+            shouldFocusInput = false
+        }
+    }
+    
     // 关闭按钮触发的关闭动画
     fun closeWithAnimation() {
         coroutineScope.launch {
@@ -335,19 +371,6 @@ private fun PostDetailSheetContent(
     
     // 当前高度
     val currentHeight = animatedHeight.value.dp
-    
-    // 计算展开进度
-    // Phase 1: 0 -> 0.5 (收起 -> 半展开)
-    // Phase 2: 0.5 -> 1.0 (半展开 -> 全展开)
-    val progress = when {
-        animatedHeight.value <= halfExpandedHeight.value -> {
-            (animatedHeight.value / halfExpandedHeight.value).coerceIn(0f, 1f)
-        }
-        else -> {
-            1f + ((animatedHeight.value - halfExpandedHeight.value) / 
-                  (fullExpandedHeight.value - halfExpandedHeight.value)).coerceIn(0f, 1f)
-        }
-    }
     
     // 判断是否处于第二阶段（半展开到全展开）
     val isPhase2 = animatedHeight.value > halfExpandedHeight.value
@@ -460,6 +483,7 @@ private fun PostDetailSheetContent(
                                     postDetail = postDetail,
                                     post = post,
                                     localCommentCount = localCommentCount,
+                                    onCommentClick = { onCommentClick() },
                                     onDrag = { dragAmount ->
                                         // 实时跟随手指
                                         val newHeight = (animatedHeight.value - dragAmount).coerceIn(
@@ -531,6 +555,60 @@ private fun PostDetailSheetContent(
                                                 color = Color(0xFF9B9B9B)
                                             )
                                         }
+                                    }
+                                }
+                            }
+                            
+                            // 评论输入框
+                            item {
+                                Spacer(Modifier.height(16.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color.White, RoundedCornerShape(24.dp))
+                                        .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(24.dp))
+                                        .padding(horizontal = 16.dp, vertical = 1.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    TextField(
+                                        value = commentText,
+                                        onValueChange = { commentText = it },
+                                        placeholder = {
+                                            Text(
+                                                text = "Write a comment...",
+                                                color = Color(0xFF9B9B9B),
+                                                fontSize = 14.sp
+                                            )
+                                        },
+                                        colors = TextFieldDefaults.colors(
+                                            focusedContainerColor = Color.Transparent,
+                                            unfocusedContainerColor = Color.Transparent,
+                                            disabledContainerColor = Color.Transparent,
+                                            focusedIndicatorColor = Color.Transparent,
+                                            unfocusedIndicatorColor = Color.Transparent,
+                                            disabledIndicatorColor = Color.Transparent,
+                                        ),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .focusRequester(focusRequester),
+                                        singleLine = false,
+                                        maxLines = 4
+                                    )
+                                    
+                                    IconButton(
+                                        onClick = {
+                                            if (commentText.isNotBlank()) {
+                                                // TODO: 发送评论
+                                                commentText = ""
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Send,
+                                            contentDescription = "Send",
+                                            tint = if (commentText.isNotBlank()) Color(0xFF636EF1) else Color(0xFF9B9B9B),
+                                            modifier = Modifier.size(24.dp)
+                                        )
                                     }
                                 }
                             }
@@ -646,6 +724,7 @@ fun PostContentSection(
     postDetail: MapPostDetailResponse,
     post: MapPostNearby?,
     localCommentCount: Int, // 本地评论数（实时更新）
+    onCommentClick: () -> Unit = {},
     onDrag: (Float) -> Unit = {},
     onDragStart: () -> Unit = {},
     onDragEnd: () -> Unit = {},
@@ -758,7 +837,8 @@ fun PostContentSection(
             StatItem(
                 icon = Icons.Outlined.Create,
                 count = localCommentCount,
-                label = "Comnt"
+                label = "Comnt",
+                onClick = onCommentClick
             )
         }
     }
@@ -768,10 +848,22 @@ fun PostContentSection(
 fun StatItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     count: Int,
-    label: String
+    label: String,
+    onClick: (() -> Unit)? = null
 ) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onClick
+                    )
+                } else Modifier
+            )
+            .padding(8.dp)
     ) {
         Icon(
             imageVector = icon,
