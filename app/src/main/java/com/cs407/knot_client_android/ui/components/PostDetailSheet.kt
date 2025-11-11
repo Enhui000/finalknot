@@ -9,12 +9,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Create
 import androidx.compose.material.icons.outlined.FavoriteBorder
 //import androidx.compose.material.icons.outlined.ChatBubbleOutline
@@ -25,13 +27,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -59,10 +64,22 @@ fun PostDetailSheet(
 ) {
     val configuration = LocalConfiguration.current
     val screenHeight = configuration.screenHeightDp.dp
+    val density = LocalDensity.current
     
-    // 两个高度状态：半展开(50%)、全展开(94%)
+    // 测量内容高度
+    var contentHeightPx by remember { mutableStateOf(0) }
+    val contentHeight = with(density) { contentHeightPx.toDp() }
+    
+    // 两个高度状态：半展开(动态)、全展开(94%)
     val collapsedHeight = 0.dp  // 完全收起时为 0
-    val halfExpandedHeight = screenHeight * 0.5f  // 半展开：50%
+    // 半展开高度：内容高度 + padding，但不超过屏幕的 70%
+    val halfExpandedHeight = remember(contentHeight) {
+        if (contentHeight > 0.dp) {
+            (contentHeight + 48.dp).coerceAtMost(screenHeight * 0.7f)
+        } else {
+            screenHeight * 0.5f  // 默认值，在测量完成前使用
+        }
+    }
     val fullExpandedHeight = screenHeight * 0.94f  // 全展开：94%
     
     // 动画状态
@@ -72,10 +89,10 @@ fun PostDetailSheet(
     // 记录拖动起始高度
     var dragStartHeight by remember { mutableStateOf(0f) }
     
-    // 监听 isVisible 变化，触发动画
-    LaunchedEffect(isVisible) {
+    // 监听 isVisible 和 halfExpandedHeight 变化，触发动画
+    LaunchedEffect(isVisible, halfExpandedHeight) {
         if (isVisible) {
-            // 展开到半展开状态
+            // 展开到半展开状态（动态高度）
             animatedHeight.animateTo(
                 targetValue = halfExpandedHeight.value,
                 animationSpec = spring(
@@ -265,15 +282,15 @@ fun PostDetailSheet(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Color(0xFFF8F6F4))
-                        .padding(horizontal = 24.dp)
+                        .padding(horizontal = 28.dp)
                 ) {
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(28.dp))
                     
                     // 可滚动内容
                     LazyColumn(
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        // 帖子内容区域（始终显示）- 带拖动手势
+                        // 帖子内容区域（始终显示）- 带拖动手势和高度测量
                         item {
                             PostContentSection(
                                 post = post,
@@ -292,6 +309,9 @@ fun PostDetailSheet(
                                 },
                                 onDragEnd = {
                                     snapToTarget()
+                                },
+                                onHeightMeasured = { heightPx ->
+                                    contentHeightPx = heightPx
                                 }
                             )
                         }
@@ -321,6 +341,100 @@ fun PostDetailSheet(
                         }
                     }
                 }
+                
+                // 右上角关闭按钮 - 浮动在内容之上
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 24.dp, end = 24.dp)
+                ) {
+                    // 动画状态管理
+                    val closeButtonInteractionSource = remember { MutableInteractionSource() }
+                    val isCloseButtonPressed by closeButtonInteractionSource.collectIsPressedAsState()
+                    
+                    // Apple-style 双阶段弹性动画
+                    val closeButtonScale = remember { Animatable(1f) }
+                    
+                    LaunchedEffect(isCloseButtonPressed) {
+                        if (isCloseButtonPressed) {
+                            // 按下：快速放大一点点
+                            closeButtonScale.animateTo(
+                                targetValue = 1.2f,
+                                animationSpec = tween(
+                                    durationMillis = 170, 
+                                    easing = LinearOutSlowInEasing
+                                )
+                            )
+                        } else {
+                            // 松手：先缩回一点再弹回 1
+                            closeButtonScale.animateTo(
+                                targetValue = 0.88f,
+                                animationSpec = tween(
+                                    durationMillis = 155, 
+                                    easing = FastOutLinearInEasing
+                                )
+                            )
+                            // 然后自然回弹到 1
+                            closeButtonScale.animateTo(
+                                targetValue = 1f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                )
+                            )
+                        }
+                    }
+                    
+                    // 毛玻璃背景层 - Android 原生系统级模糊
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .graphicsLayer {
+                                renderEffect = RenderEffect
+                                    .createBlurEffect(40f, 40f, Shader.TileMode.CLAMP)
+                                    .asComposeRenderEffect()
+                            }
+                            .background(Color.White.copy(alpha = 0.65f))
+                    )
+                    
+                    // 主按钮
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .scale(closeButtonScale.value)
+                            .border(
+                                width = 1.dp,
+                                color = Color(0xFFE5E7EB).copy(alpha = 0.6f),
+                                shape = CircleShape
+                            )
+                            .clip(CircleShape)
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.3f),
+                                        Color.White.copy(alpha = 0.2f)
+                                    )
+                                )
+                            )
+                            .clickable(
+                                onClick = onDismiss,
+                                indication = null,
+                                interactionSource = closeButtonInteractionSource
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Close",
+                            modifier = Modifier.size(30.dp),
+                            tint = if (isCloseButtonPressed) 
+                                Color(0xFF636EF1) // 按下时：蓝紫色
+                            else 
+                                Color(0xFF6B7280) // 正常时：gray-600
+                        )
+                    }
+                }
             }
         }
     }
@@ -331,11 +445,16 @@ fun PostContentSection(
     post: MapPostNearby,
     onDrag: (Float) -> Unit = {},
     onDragStart: () -> Unit = {},
-    onDragEnd: () -> Unit = {}
+    onDragEnd: () -> Unit = {},
+    onHeightMeasured: (Int) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .onGloballyPositioned { coordinates ->
+                // 测量内容高度
+                onHeightMeasured(coordinates.size.height)
+            }
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onDragStart = { onDragStart() },
@@ -423,11 +542,11 @@ fun PostContentSection(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            StatItem(
-                icon = Icons.Outlined.FavoriteBorder,
-                count = post.viewCount,
-                label = "Views"
-            )
+            // StatItem(
+            //     icon = Icons.Outlined.FavoriteBorder,
+            //     count = post.viewCount,
+            //     label = "Views"
+            // )
             StatItem(
                 icon = Icons.Outlined.FavoriteBorder,
                 count = post.likeCount,

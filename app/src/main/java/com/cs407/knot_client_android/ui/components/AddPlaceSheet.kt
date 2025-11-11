@@ -239,7 +239,7 @@ fun AddPlaceSheet(
                             // 毛玻璃背景层 - Android 原生系统级模糊
                             Box(
                                 modifier = Modifier
-                                    .size(70.dp)
+                                    .size(56.dp)
                                     .clip(CircleShape)
                                     .graphicsLayer {
                                         renderEffect = RenderEffect
@@ -252,7 +252,7 @@ fun AddPlaceSheet(
                             // 主按钮
                             Box(
                                 modifier = Modifier
-                                    .size(70.dp)
+                                    .size(56.dp)
                                     .scale(buttonScale.value)
                                     .border(
                                         width = 1.dp,
