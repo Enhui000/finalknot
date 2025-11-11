@@ -16,8 +16,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.Create
 import androidx.compose.material.icons.outlined.FavoriteBorder
 //import androidx.compose.material.icons.outlined.ChatBubbleOutline
@@ -195,6 +195,7 @@ fun PostDetailSheet(
         isLoadingComments = isLoadingComments,
         errorMessage = errorMessage,
         onDismiss = onDismiss,
+        mainViewModel = mainViewModel,
         modifier = modifier
     )
 }
@@ -234,6 +235,7 @@ private fun PostDetailSheetContent(
     isLoadingComments: Boolean,
     errorMessage: String?,
     onDismiss: () -> Unit,
+    mainViewModel: MainViewModel,
     modifier: Modifier = Modifier
 ) {
     val configuration = LocalConfiguration.current
@@ -597,14 +599,31 @@ private fun PostDetailSheetContent(
                                     
                                     IconButton(
                                         onClick = {
-                                            if (commentText.isNotBlank()) {
-                                                // TODO: 发送评论
+                                            if (commentText.isNotBlank() && postDetail != null) {
+                                                // 生成唯一的 clientMsgId（使用时间戳）
+                                                val clientMsgId = "c-${System.currentTimeMillis()}"
+                                                
+                                                // 构建 WebSocket 消息
+                                                val message = mapOf(
+                                                    "type" to "MSG_SEND",
+                                                    "convId" to postDetail.convId,
+                                                    "clientMsgId" to clientMsgId,
+                                                    "msgType" to 0,  // 0 = 文本消息
+                                                    "contentText" to commentText
+                                                )
+                                                
+                                                // 通过 WebSocket 发送
+                                                val gson = Gson()
+                                                val json = gson.toJson(message)
+                                                mainViewModel.send(json)
+                                                
+                                                // 清空输入框
                                                 commentText = ""
                                             }
                                         }
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Filled.Send,
+                                            imageVector = Icons.AutoMirrored.Filled.Send,
                                             contentDescription = "Send",
                                             tint = if (commentText.isNotBlank()) Color(0xFF636EF1) else Color(0xFF9B9B9B),
                                             modifier = Modifier.size(24.dp)
