@@ -758,7 +758,7 @@ fun PostContentSection(
             StatItem(
                 icon = Icons.Outlined.Create,
                 count = localCommentCount,
-                label = "Comments"
+                label = "Comnt"
             )
         }
     }

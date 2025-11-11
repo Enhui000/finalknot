@@ -5,11 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -43,7 +40,7 @@ fun MapMarker(
         Box(
             modifier = Modifier
                 .width(115.dp)
-                .height(55.dp)
+                .height(56.dp)
                 .shadow(4.dp, cornerRadius)
                 .clip(cornerRadius)
                 .background(Color(0xFFF5F0E8)) // 米黄色背景
@@ -69,45 +66,36 @@ fun MapMarker(
                     overflow = TextOverflow.Ellipsis
                 )
                 
-                // 底部信息栏
+                // 底部用户信息栏
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 点赞数
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    // 用户头像
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            // 灰色背景
+                            .background(Color(0xFFF8F6F4))
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = null,
-                            tint = Color(0xFFE57373),
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Text(
-                            text = post.likeCount.toString(),
-                            fontSize = 10.sp,
-                            color = Color(0xFF5D4E37)
-                        )
+                        // 如果有头像URL可以在这里加载图片
+                        // 现在显示一个简单的背景色
                     }
                     
-                    // 评论数
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text(
-                            text = "💬",
-                            fontSize = 10.sp
-                        )
-                        Text(
-                            text = post.commentCount.toString(),
-                            fontSize = 10.sp,
-                            color = Color(0xFF5D4E37)
-                        )
-                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    
+                    // 用户名
+                    Text(
+                        text = post.creatorUsername,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF5D4E37),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
                 }
             }
         }
