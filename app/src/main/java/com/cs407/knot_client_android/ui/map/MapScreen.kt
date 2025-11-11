@@ -295,7 +295,7 @@ fun MapScreen(
     var geocodingJob by remember { mutableStateOf<Job?>(null) }
     var fetchPostsJob by remember { mutableStateOf<Job?>(null) }
     
-    // 加载附近帖子的函数（带节流）
+    // 加载附近帖子的函数（带节流）- 使用 V2 API（基于 radius）
     fun fetchNearbyPosts(lat: Double, lng: Double, zoom: Double) {
         // 取消之前的请求
         fetchPostsJob?.cancel()
@@ -308,13 +308,14 @@ fun MapScreen(
                 isLoadingPosts = true
                 errorMessage = null
                 
-                val posts = mapPostRepository.getNearbyPosts(
+                // 使用 V2 API（基于 radius，小数据集优化）
+                val posts = mapPostRepository.getNearbyPostsV2(
                     lat = lat,
                     lng = lng,
-                    zoomLevel = zoom.toInt(),
-                    timeRange = "7D",  // 固定 7 天
-                    postType = "ALL",  // 固定 ALL 类型
-                    maxResults = 100
+                    radius = 500000,         // 固定 500000m 半径
+                    timeRange = "7D",      // 固定 7 天（可配置）
+                    postType = "ALL",      // 固定 ALL 类型（可配置）
+                    maxResults = 200       // 固定 200 条
                 )
                 
                 mapPosts = posts
