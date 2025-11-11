@@ -41,15 +41,22 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 import com.cs407.knot_client_android.R
+import com.cs407.knot_client_android.data.api.RetrofitProvider
+import com.cs407.knot_client_android.data.local.TokenStore
+import com.cs407.knot_client_android.data.model.response.ConversationMessage
+import com.cs407.knot_client_android.data.model.response.MapPostDetailResponse
 import com.cs407.knot_client_android.data.model.response.MapPostNearby
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
-// Mock Comment Data
+// Comment Data Class (converted from ConversationMessage)
 data class Comment(
     val commentId: Long,
     val username: String,
-    val avatar: Int, // Resource ID
     val content: String,
     val timestamp: String,
     val likeCount: Int
@@ -59,6 +66,118 @@ data class Comment(
 fun PostDetailSheet(
     post: MapPostNearby?,
     isVisible: Boolean,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    
+    // 状态管理
+    var postDetail by remember { mutableStateOf<MapPostDetailResponse?>(null) }
+    var comments by remember { mutableStateOf<List<Comment>>(emptyList()) }
+    var isLoadingDetail by remember { mutableStateOf(false) }
+    var isLoadingComments by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    
+    // 加载帖子详情和评论
+    LaunchedEffect(post?.mapPostId, isVisible) {
+        if (isVisible && post != null) {
+            // 加载帖子详情
+            isLoadingDetail = true
+            errorMessage = null
+            try {
+                val tokenStore = TokenStore(context)
+                val token = tokenStore.getAccessToken()
+                val apiService = RetrofitProvider.createMapPostService("http://10.0.2.2:8080")
+                
+                val response = apiService.getMapPostDetail("Bearer $token", post.mapPostId)
+                if (response.success && response.data != null) {
+                    postDetail = response.data
+                    
+                    // 加载评论
+                    isLoadingComments = true
+                    try {
+                        val commentsResponse = apiService.getConversationMessages(
+                            token = "Bearer $token",
+                            conversationId = response.data.convId,
+                            page = 1,
+                            size = 20
+                        )
+                        if (commentsResponse.success && commentsResponse.data != null) {
+                            // 转换 ConversationMessage 到 Comment
+                            comments = commentsResponse.data.messageList.map { msg: ConversationMessage ->
+                                Comment(
+                                    commentId = msg.msgId,
+                                    username = "User ${msg.senderId}", // TODO: 需要获取用户名
+                                    content = msg.contentText ?: "",
+                                    timestamp = formatTimestamp(msg.createdAt),
+                                    likeCount = 0 // TODO: 需要获取点赞数
+                                )
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    } finally {
+                        isLoadingComments = false
+                    }
+                } else {
+                    errorMessage = response.message ?: "获取帖子详情失败"
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                errorMessage = e.message ?: "网络错误"
+            } finally {
+                isLoadingDetail = false
+            }
+        }
+    }
+    
+    PostDetailSheetContent(
+        post = post,
+        postDetail = postDetail,
+        comments = comments,
+        isVisible = isVisible,
+        isLoadingDetail = isLoadingDetail,
+        isLoadingComments = isLoadingComments,
+        errorMessage = errorMessage,
+        onDismiss = onDismiss,
+        modifier = modifier
+    )
+}
+
+// 格式化时间戳
+private fun formatTimestamp(timestamp: String): String {
+    return try {
+        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val date = sdf.parse(timestamp)
+        val now = Date()
+        val diff = now.time - (date?.time ?: 0)
+        
+        val seconds = diff / 1000
+        val minutes = seconds / 60
+        val hours = minutes / 60
+        val days = hours / 24
+        
+        when {
+            days > 0 -> "$days day${if (days > 1) "s" else ""} ago"
+            hours > 0 -> "$hours hour${if (hours > 1) "s" else ""} ago"
+            minutes > 0 -> "$minutes minute${if (minutes > 1) "s" else ""} ago"
+            else -> "just now"
+        }
+    } catch (e: Exception) {
+        timestamp
+    }
+}
+
+@Composable
+private fun PostDetailSheetContent(
+    post: MapPostNearby?,
+    postDetail: MapPostDetailResponse?,
+    comments: List<Comment>,
+    isVisible: Boolean,
+    isLoadingDetail: Boolean,
+    isLoadingComments: Boolean,
+    errorMessage: String?,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -201,52 +320,6 @@ fun PostDetailSheet(
         51.dp
     }
     
-    // Mock Comments Data
-    val mockComments = remember {
-        listOf(
-            Comment(
-                commentId = 1,
-                username = "Alice",
-                avatar = R.drawable.user_avatar,
-                content = "Great place! Had an amazing time here 🎉",
-                timestamp = "2 hours ago",
-                likeCount = 12
-            ),
-            Comment(
-                commentId = 2,
-                username = "Bob",
-                avatar = R.drawable.user_avatar,
-                content = "Thanks for sharing! Will definitely visit soon.",
-                timestamp = "5 hours ago",
-                likeCount = 8
-            ),
-            Comment(
-                commentId = 3,
-                username = "Charlie",
-                avatar = R.drawable.user_avatar,
-                content = "The coffee here is absolutely fantastic! ☕️",
-                timestamp = "1 day ago",
-                likeCount = 15
-            ),
-            Comment(
-                commentId = 4,
-                username = "Diana",
-                avatar = R.drawable.user_avatar,
-                content = "Perfect spot for a weekend hangout!",
-                timestamp = "2 days ago",
-                likeCount = 6
-            ),
-            Comment(
-                commentId = 5,
-                username = "Eve",
-                avatar = R.drawable.user_avatar,
-                content = "Love the atmosphere here 💕",
-                timestamp = "3 days ago",
-                likeCount = 20
-            )
-        )
-    }
-    
     // Sheet 容器
     if (animatedHeight.value > 0f && post != null) {
         Box(
@@ -308,28 +381,55 @@ fun PostDetailSheet(
                     ) {
                         // 帖子内容区域（始终显示）- 带拖动手势和高度测量
                         item {
-                            PostContentSection(
-                                post = post,
-                                onDrag = { dragAmount ->
-                                    // 实时跟随手指
-                                    val newHeight = (animatedHeight.value - dragAmount).coerceIn(
-                                        0f,
-                                        fullExpandedHeight.value
+                            if (isLoadingDetail) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(64.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    androidx.compose.material3.CircularProgressIndicator(
+                                        color = Color(0xFF636EF1)
                                     )
-                                    coroutineScope.launch {
-                                        animatedHeight.snapTo(newHeight)
-                                    }
-                                },
-                                onDragStart = {
-                                    dragStartHeight = animatedHeight.value
-                                },
-                                onDragEnd = {
-                                    snapToTarget()
-                                },
-                                onHeightMeasured = { heightPx ->
-                                    contentHeightPx = heightPx
                                 }
-                            )
+                            } else if (errorMessage != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = errorMessage,
+                                        fontSize = 14.sp,
+                                        color = Color(0xFFE53E3E)
+                                    )
+                                }
+                            } else if (postDetail != null) {
+                                PostContentSection(
+                                    postDetail = postDetail,
+                                    post = post,
+                                    onDrag = { dragAmount ->
+                                        // 实时跟随手指
+                                        val newHeight = (animatedHeight.value - dragAmount).coerceIn(
+                                            0f,
+                                            fullExpandedHeight.value
+                                        )
+                                        coroutineScope.launch {
+                                            animatedHeight.snapTo(newHeight)
+                                        }
+                                    },
+                                    onDragStart = {
+                                        dragStartHeight = animatedHeight.value
+                                    },
+                                    onDragEnd = {
+                                        snapToTarget()
+                                    },
+                                    onHeightMeasured = { heightPx ->
+                                        contentHeightPx = heightPx
+                                    }
+                                )
+                            }
                         }
                         
                         // 评论区域（只在第二阶段显示）
@@ -337,7 +437,7 @@ fun PostDetailSheet(
                             item {
                                 Spacer(Modifier.height(24.dp))
                                 Text(
-                                    text = "COMMENTS (${mockComments.size})",
+                                    text = "COMMENTS (${comments.size})",
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color(0xFF1C1B1F)
@@ -345,9 +445,43 @@ fun PostDetailSheet(
                                 Spacer(Modifier.height(16.dp))
                             }
                             
-                            items(mockComments) { comment ->
-                                CommentItem(comment = comment)
-                                Spacer(Modifier.height(12.dp))
+                            // 加载中状态
+                            if (isLoadingComments) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        androidx.compose.material3.CircularProgressIndicator(
+                                            color = Color(0xFF636EF1)
+                                        )
+                                    }
+                                }
+                            } else {
+                                items(comments) { comment ->
+                                    CommentItem(comment = comment)
+                                    Spacer(Modifier.height(12.dp))
+                                }
+                                
+                                // 空状态
+                                if (comments.isEmpty()) {
+                                    item {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(32.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "No comments yet",
+                                                fontSize = 14.sp,
+                                                color = Color(0xFF9B9B9B)
+                                            )
+                                        }
+                                    }
+                                }
                             }
                             
                             // 底部留白
@@ -458,7 +592,8 @@ fun PostDetailSheet(
 
 @Composable
 fun PostContentSection(
-    post: MapPostNearby,
+    postDetail: MapPostDetailResponse,
+    post: MapPostNearby?,
     onDrag: (Float) -> Unit = {},
     onDragStart: () -> Unit = {},
     onDragEnd: () -> Unit = {},
@@ -484,7 +619,7 @@ fun PostContentSection(
     ) {
         // 帖子标题
         Text(
-            text = post.title,
+            text = postDetail.title,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF1C1B1F)
@@ -508,13 +643,13 @@ fun PostContentSection(
             
             Column {
                 Text(
-                    text = post.creatorUsername ?: "Unknown User",
+                    text = postDetail.creatorUsername,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF1C1B1F)
                 )
                 Text(
-                    text = "${(post.distance / 1000).toInt()} km away",
+                    text = "${(post?.distance ?: 0.0 / 1000).toInt()} km away",
                     fontSize = 13.sp,
                     color = Color(0xFF9B9B9B)
                 )
@@ -525,7 +660,7 @@ fun PostContentSection(
         
         // 帖子描述
         Text(
-            text = post.description ?: "No description available",
+            text = postDetail.description ?: "No description available",
             fontSize = 16.sp,
             color = Color(0xFF4A5568),
             lineHeight = 24.sp
@@ -545,7 +680,7 @@ fun PostContentSection(
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                text = post.locName ?: "Unknown Location",
+                text = postDetail.locName ?: "Unknown Location",
                 fontSize = 14.sp,
                 color = Color(0xFF9B9B9B)
             )
@@ -558,19 +693,14 @@ fun PostContentSection(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // StatItem(
-            //     icon = Icons.Outlined.FavoriteBorder,
-            //     count = post.viewCount,
-            //     label = "Views"
-            // )
             StatItem(
                 icon = Icons.Outlined.FavoriteBorder,
-                count = post.likeCount,
+                count = postDetail.likeCount,
                 label = "Likes"
             )
             StatItem(
                 icon = Icons.Outlined.Create,
-                count = post.commentCount,
+                count = postDetail.commentCount,
                 label = "Comments"
             )
         }
@@ -616,13 +746,11 @@ fun CommentItem(comment: Comment) {
             .padding(12.dp)
     ) {
         // 头像
-        Image(
-            painter = painterResource(id = comment.avatar),
-            contentDescription = "Avatar",
+        Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(CircleShape),
-            contentScale = ContentScale.Crop
+                .clip(CircleShape)
+                .background(Color(0xFF4A90E2))
         )
         
         Spacer(Modifier.width(12.dp))
