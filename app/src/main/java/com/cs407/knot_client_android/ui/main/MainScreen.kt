@@ -19,6 +19,8 @@ import com.cs407.knot_client_android.ui.components.BottomNavigationBar
 import com.cs407.knot_client_android.ui.components.ExpandableBottomSheet
 import com.cs407.knot_client_android.ui.components.FloatingActionButton
 import com.cs407.knot_client_android.ui.components.NavTab
+import com.cs407.knot_client_android.ui.components.PostDetailSheet
+import com.cs407.knot_client_android.data.model.response.MapPostNearby
 import com.cs407.knot_client_android.ui.map.MapScreen
 import com.cs407.knot_client_android.ui.profile.ProfileScreen
 import androidx.compose.runtime.getValue
@@ -57,6 +59,10 @@ fun MainScreen(
     // 控制 MapScreen 中 Add Sheet 的显示
     var isAddSheetVisible by remember { mutableStateOf(false) }
     
+    // PostDetailSheet 状态
+    var selectedPost by remember { mutableStateOf<MapPostNearby?>(null) }
+    var isPostDetailVisible by remember { mutableStateOf(false) }
+    
     // 根据展开进度计算 padding：
     // 收起时 30dp，半展开时 8dp，全展开时 0dp
     val currentPadding = when {
@@ -91,7 +97,14 @@ fun MainScreen(
                     else Modifier.alpha(0f)
                 )
         ) {
-            MapScreen(navController = navController, mainViewModel = mainVm)
+            MapScreen(
+                navController = navController,
+                mainViewModel = mainVm,
+                onPostSelected = { post ->
+                    selectedPost = post
+                    isPostDetailVisible = true
+                }
+            )
         }
         
         // Chat 页面 - 永远存在，但可能不可见
@@ -159,6 +172,19 @@ fun MainScreen(
             onDismiss = { isAddSheetVisible = false },
             modifier = Modifier
                 .zIndex(100f) // 最高 z-index，覆盖所有元素
+                .align(Alignment.BottomCenter)
+        )
+        
+        // PostDetailSheet - 帖子详情底部弹出层，覆盖所有元素
+        PostDetailSheet(
+            post = selectedPost,
+            isVisible = isPostDetailVisible,
+            onDismiss = {
+                isPostDetailVisible = false
+                selectedPost = null
+            },
+            modifier = Modifier
+                .zIndex(100f) // 最高 z-index，覆盖所有元素（包括 BottomNavigationBar 和 FloatingActionButton）
                 .align(Alignment.BottomCenter)
         )
     }

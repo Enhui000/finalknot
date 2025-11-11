@@ -221,13 +221,13 @@ fun PostDetailSheet(
             modifier = modifier
                 .fillMaxWidth()
                 .height(currentHeight)
-                .padding(horizontal = currentPadding)
+                .padding(start = currentPadding, end = currentPadding, bottom = currentPadding)
         ) {
             // 毛玻璃背景层
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(topStart = currentCornerRadius, topEnd = currentCornerRadius))
+                    .clip(RoundedCornerShape(currentCornerRadius))
                     .graphicsLayer {
                         renderEffect = RenderEffect
                             .createBlurEffect(40f, 40f, Shader.TileMode.CLAMP)
@@ -243,9 +243,9 @@ fun PostDetailSheet(
                     .border(
                         1.dp,
                         Color(0xFFE5E7EB).copy(alpha = 0.6f),
-                        RoundedCornerShape(topStart = currentCornerRadius, topEnd = currentCornerRadius)
+                        RoundedCornerShape(currentCornerRadius)
                     )
-                    .clip(RoundedCornerShape(topStart = currentCornerRadius, topEnd = currentCornerRadius))
+                    .clip(RoundedCornerShape(currentCornerRadius))
                     .background(
                         brush = Brush.linearGradient(
                             colors = listOf(
@@ -267,54 +267,33 @@ fun PostDetailSheet(
                         .background(Color(0xFFF8F6F4))
                         .padding(horizontal = 24.dp)
                 ) {
-                    // 顶部拖动区域
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .pointerInput(Unit) {
-                                detectVerticalDragGestures(
-                                    onDragStart = {
-                                        dragStartHeight = animatedHeight.value
-                                    },
-                                    onDragEnd = {
-                                        snapToTarget()
-                                    },
-                                    onVerticalDrag = { change, dragAmount ->
-                                        change.consume()
-                                        
-                                        // 实时跟随手指
-                                        val newHeight = (animatedHeight.value - dragAmount).coerceIn(
-                                            0f,
-                                            fullExpandedHeight.value
-                                        )
-                                        coroutineScope.launch {
-                                            animatedHeight.snapTo(newHeight)
-                                        }
-                                    }
-                                )
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // 拖动指示器横条
-                        Box(
-                            modifier = Modifier
-                                .width(48.dp)
-                                .height(4.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(Color(0xFFD0D0D0))
-                        )
-                    }
-                    
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(24.dp))
                     
                     // 可滚动内容
                     LazyColumn(
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        // 帖子内容区域（始终显示）
+                        // 帖子内容区域（始终显示）- 带拖动手势
                         item {
-                            PostContentSection(post = post)
+                            PostContentSection(
+                                post = post,
+                                onDrag = { dragAmount ->
+                                    // 实时跟随手指
+                                    val newHeight = (animatedHeight.value - dragAmount).coerceIn(
+                                        0f,
+                                        fullExpandedHeight.value
+                                    )
+                                    coroutineScope.launch {
+                                        animatedHeight.snapTo(newHeight)
+                                    }
+                                },
+                                onDragStart = {
+                                    dragStartHeight = animatedHeight.value
+                                },
+                                onDragEnd = {
+                                    snapToTarget()
+                                }
+                            )
                         }
                         
                         // 评论区域（只在第二阶段显示）
@@ -348,9 +327,25 @@ fun PostDetailSheet(
 }
 
 @Composable
-fun PostContentSection(post: MapPostNearby) {
+fun PostContentSection(
+    post: MapPostNearby,
+    onDrag: (Float) -> Unit = {},
+    onDragStart: () -> Unit = {},
+    onDragEnd: () -> Unit = {}
+) {
     Column(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = { onDragStart() },
+                    onDragEnd = { onDragEnd() },
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        onDrag(dragAmount)
+                    }
+                )
+            }
     ) {
         // 帖子标题
         Text(
