@@ -1,20 +1,30 @@
 package com.cs407.knot_client_android.ui.components
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import android.graphics.RenderEffect
+import android.graphics.Shader
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
@@ -30,7 +40,7 @@ fun AddPlaceSheet(
 ) {
     val configuration = LocalConfiguration.current
     val screenHeight = configuration.screenHeightDp.dp
-    val targetHeight = screenHeight * 0.75f
+    val targetHeight = screenHeight * 0.92f
     val coroutineScope = rememberCoroutineScope()
     
     // 动画高度：从 0 到 targetHeight
@@ -69,10 +79,15 @@ fun AddPlaceSheet(
             if (current < threshold) {
                 // 关闭 sheet
                 animatedHeight.animateTo(
+//                    targetValue = 0f,
+//                    animationSpec = spring(
+//                        dampingRatio = 0.75f, // 快速下滑
+//                        stiffness = Spring.StiffnessLow
+//                    )
                     targetValue = 0f,
-                    animationSpec = spring(
-                        dampingRatio = 0.75f, // 快速下滑
-                        stiffness = Spring.StiffnessLow
+                    animationSpec = tween(
+                        durationMillis = 750, // 从200~500之间调节速度
+                        easing = FastOutSlowInEasing
                     )
                 )
                 // 动画结束后通知外部关闭
@@ -80,10 +95,15 @@ fun AddPlaceSheet(
             } else {
                 // 回弹到原位
                 animatedHeight.animateTo(
-                    targetValue = targetHeight.value,
-                    animationSpec = spring(
-                        dampingRatio = 0.75f, // 快速回弹
-                        stiffness = Spring.StiffnessLow
+                    // targetValue = targetHeight.value,
+                    // animationSpec = spring(
+                    //     dampingRatio = 0.75f, // 快速回弹
+                    //     stiffness = Spring.StiffnessLow
+                    // )
+                    targetValue = 0f,
+                    animationSpec = tween(
+                        durationMillis = 750, // 从200~500之间调节速度
+                        easing = FastOutSlowInEasing
                     )
                 )
             }
@@ -103,7 +123,7 @@ fun AddPlaceSheet(
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(5.dp)
+                .padding(0.dp)
                 .height(animatedHeight.value.dp)
                 .clip(RoundedCornerShape(51.0f.dp)) // 更大的圆角
                 .background(Color(0xFFF8F6F4)) // 米黄色，不透明
@@ -148,29 +168,125 @@ fun AddPlaceSheet(
                         },
 //                    contentAlignment = Alignment.TopCenter
                 ) {
-                    // 指示器横条
-                    // Box(
-                    //     modifier = Modifier
-                    //         .width(48.dp)
-                    //         .height(4.dp)
-                    //         .clip(RoundedCornerShape(2.dp))
-                    //         .background(Color(0xFFD0D0D0))
-                    // )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "DROP A KNOT",
-                        fontSize = 24.sp, // 稍微小一点，更精致
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1C1B1F)
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "Mark your favorite location on the map 📍",
-                        fontSize = 14.sp,
-                        color = Color(0xFF9B9B9B),
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ){
+                        Column{
+                            // 指示器横条
+                            // Box(
+                            //     modifier = Modifier
+                            //         .width(48.dp)
+                            //         .height(4.dp)
+                            //         .clip(RoundedCornerShape(2.dp))
+                            //         .background(Color(0xFFD0D0D0))
+                            // )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "DROP A KNOT",
+                                fontSize = 24.sp, // 稍微小一点，更精致
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF1C1B1F)
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "Mark your favorite location on the map 📍",
+                                fontSize = 14.sp,
+                                color = Color(0xFF9B9B9B),
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(Modifier.height(24.dp))
+                        }
+                        // button that dismiss the sheet
+                        Box {
+                            // 动画状态管理
+                            val buttonInteractionSource = remember { MutableInteractionSource() }
+                            val isButtonPressed by buttonInteractionSource.collectIsPressedAsState()
+                            
+                            // Apple-style 双阶段弹性动画
+                            val buttonScale = remember { Animatable(1f) }
+                            
+                            LaunchedEffect(isButtonPressed) {
+                                if (isButtonPressed) {
+                                    // 按下：快速放大一点点
+                                    buttonScale.animateTo(
+                                        targetValue = 1.2f,
+                                        animationSpec = tween(
+                                            durationMillis = 170, 
+                                            easing = LinearOutSlowInEasing
+                                        )
+                                    )
+                                } else {
+                                    // 松手：先缩回一点再弹回 1
+                                    buttonScale.animateTo(
+                                        targetValue = 0.88f,
+                                        animationSpec = tween(
+                                            durationMillis = 155, 
+                                            easing = FastOutLinearInEasing
+                                        )
+                                    )
+                                    // 然后自然回弹到 1
+                                    buttonScale.animateTo(
+                                        targetValue = 1f,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessLow
+                                        )
+                                    )
+                                }
+                            }
+                            
+                            // 毛玻璃背景层 - Android 原生系统级模糊
+                            Box(
+                                modifier = Modifier
+                                    .size(70.dp)
+                                    .clip(CircleShape)
+                                    .graphicsLayer {
+                                        renderEffect = RenderEffect
+                                            .createBlurEffect(40f, 40f, Shader.TileMode.CLAMP)
+                                            .asComposeRenderEffect()
+                                    }
+                                    .background(Color.White.copy(alpha = 0.65f))
+                            )
+                            
+                            // 主按钮
+                            Box(
+                                modifier = Modifier
+                                    .size(70.dp)
+                                    .scale(buttonScale.value)
+                                    .border(
+                                        width = 1.dp,
+                                        color = Color(0xFFE5E7EB).copy(alpha = 0.6f), // 边框也略微透明
+                                        shape = CircleShape
+                                    )
+                                    .clip(CircleShape)
+                                    .background(
+                                        brush = Brush.linearGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = 0.3f),
+                                                Color.White.copy(alpha = 0.2f)
+                                            )
+                                        )
+                                    )
+                                    .clickable(
+                                        onClick = onDismiss,
+                                        indication = null,
+                                        interactionSource = buttonInteractionSource
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(30.dp),
+                                    tint = if (isButtonPressed) 
+                                        Color(0xFF636EF1) // 按下时：蓝紫色，与 BottomNavigationBar 选中颜色一致
+                                    else 
+                                        Color(0xFF6B7280) // 正常时：gray-600，与 BottomNavigationBar 未选中颜色一致
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // 添加内容：：：TODO
