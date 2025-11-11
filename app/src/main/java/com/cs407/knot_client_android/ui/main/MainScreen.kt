@@ -91,7 +91,7 @@ fun MainScreen(
                     else Modifier.alpha(0f)
                 )
         ) {
-            MapScreen(navController = navController)
+            MapScreen(navController = navController, mainViewModel = mainVm)
         }
         
         // Chat 页面 - 永远存在，但可能不可见

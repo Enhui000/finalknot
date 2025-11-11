@@ -100,10 +100,15 @@ import com.mapbox.maps.viewannotation.viewAnnotationOptions
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.cs407.knot_client_android.ui.main.MainViewModel
+import com.cs407.knot_client_android.data.model.WebSocketMessage
+import com.cs407.knot_client_android.data.model.MapPostNewMessage
+import com.google.gson.Gson
 
 @Composable
 fun MapScreen(
-    navController: NavHostController
+    navController: NavHostController,
+    mainViewModel: MainViewModel
 ) {
     val context = LocalContext.current
     val locationManager = remember { LocationManager(context) }
@@ -123,8 +128,9 @@ fun MapScreen(
     // 为每个 marker 单独管理显示状态，用于动画（使用 Set 来追踪已显示的 marker）
     var visibleMarkerIds by remember { mutableStateOf(setOf<Long>()) }
     
-    // 地图帖子数据状态
-    var mapPosts by remember { mutableStateOf<List<MapPostNearby>>(emptyList()) }
+    // 地图帖子数据状态 - 使用 Map 进行本地缓存和去重
+    var mapPostsCache by remember { mutableStateOf<Map<Long, MapPostNearby>>(emptyMap()) }
+    val mapPosts: List<MapPostNearby> by remember { derivedStateOf { mapPostsCache.values.toList() } }
     var isLoadingPosts by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -319,16 +325,24 @@ fun MapScreen(
                     maxResults = 200       // 固定 200 条
                 )
                 
-                mapPosts = posts
+                // 合并新数据到缓存（去重）
+                val updatedCache = mapPostsCache.toMutableMap()
+                val newPostIds = mutableListOf<Long>()
                 
-                // 重置可见标记，准备重新播放进入动画
-                visibleMarkerIds = emptySet()
+                posts.forEach { post ->
+                    if (!updatedCache.containsKey(post.mapPostId)) {
+                        updatedCache[post.mapPostId] = post
+                        newPostIds.add(post.mapPostId)
+                    }
+                }
+                
+                mapPostsCache = updatedCache
                 showMarkers = true
                 
-                // 依次显示每个 marker
-                posts.forEach { post ->
+                // 依次显示新的 marker（带动画）
+                newPostIds.forEach { postId ->
                     delay(80L) // 每个 marker 间隔 80ms
-                    visibleMarkerIds = visibleMarkerIds + post.mapPostId
+                    visibleMarkerIds = visibleMarkerIds + postId
                 }
                 
             } catch (e: Exception) {
@@ -362,6 +376,59 @@ fun MapScreen(
             val center = mapViewportState.cameraState?.center ?: location
             val zoom = mapViewportState.cameraState?.zoom ?: 15.0
             fetchNearbyPosts(center.latitude(), center.longitude(), zoom)
+        }
+    }
+    
+    // 🔔 监听 WebSocket 消息（实时推送新帖子）
+    LaunchedEffect(Unit) {
+        mainViewModel.wsManager.rawMessages.collect { message ->
+            message?.let {
+                try {
+                    // 解析消息类型
+                    val gson = Gson()
+                    val baseMessage = gson.fromJson(it, WebSocketMessage::class.java)
+                    
+                    if (baseMessage.type == "MAP_POST_NEW") {
+                        // 解析完整消息
+                        val mapPostNew = gson.fromJson(it, MapPostNewMessage::class.java)
+                        
+                        // 转换为 MapPostNearby 格式
+                        val newPost = MapPostNearby(
+                            mapPostId = mapPostNew.mapPostId,
+                            convId = mapPostNew.convId,
+                            title = mapPostNew.title,
+                            description = mapPostNew.description,
+                            mediaUrls = mapPostNew.mediaUrls,
+                            locLat = mapPostNew.loc.lat,
+                            locLng = mapPostNew.loc.lng,
+                            locName = mapPostNew.loc.name,
+                            distance = 0.0,  // 暂时设置为 0
+                            creatorId = mapPostNew.creatorId,
+                            creatorUsername = mapPostNew.creatorUsername,
+                            creatorAvatar = mapPostNew.creatorAvatar,
+                            viewCount = 0,
+                            likeCount = 0,
+                            commentCount = 0,
+                            postType = "ALL",
+                            createdAtMs = mapPostNew.createdAtMs
+                        )
+                        
+                        // 添加到缓存（去重）
+                        if (!mapPostsCache.containsKey(newPost.mapPostId)) {
+                            mapPostsCache = mapPostsCache + (newPost.mapPostId to newPost)
+                            
+                            // 延迟一下，然后显示动画
+                            delay(300)
+                            visibleMarkerIds = visibleMarkerIds + newPost.mapPostId
+                            
+                            // 显示提示
+                            snackbarHostState.showSnackbar("🎉 ${mapPostNew.creatorUsername} 发布了新帖子！")
+                        }
+                    }
+                } catch (e: Exception) {
+                    // 忽略解析错误
+                }
+            }
         }
     }
     
@@ -954,8 +1021,9 @@ fun MapScreen(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun MapScreenPreview() {
-    MapScreen(navController = rememberNavController())
-}
+// Preview 需要 MainViewModel，暂时禁用
+//@Preview(showBackground = true)
+//@Composable
+//fun MapScreenPreview() {
+//    MapScreen(navController = rememberNavController())
+//}

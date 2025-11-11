@@ -27,6 +27,10 @@ class SimpleWebSocketManager {
 
     private val _messages = MutableStateFlow<List<String>>(emptyList())
     val messages: StateFlow<List<String>> = _messages
+    
+    // 新增：WebSocket 消息流（用于业务逻辑处理）
+    private val _rawMessages = MutableStateFlow<String?>(null)
+    val rawMessages: StateFlow<String?> = _rawMessages
 
 //    fun connect(url: String) {
 //        if (webSocket != null) {
@@ -96,6 +100,8 @@ class SimpleWebSocketManager {
 
             override fun onMessage(webSocket: WebSocket, text: String) {
                 addLog("⬇️ 收到: $text")
+                // 发射原始消息供其他组件监听
+                _rawMessages.value = text
             }
 
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
