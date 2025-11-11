@@ -183,6 +183,7 @@ fun MainScreen(
                 isPostDetailVisible = false
                 selectedPost = null
             },
+            mainViewModel = mainVm,
             modifier = Modifier
                 .zIndex(100f) // 最高 z-index，覆盖所有元素（包括 BottomNavigationBar 和 FloatingActionButton）
                 .align(Alignment.BottomCenter)

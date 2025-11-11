@@ -50,6 +50,10 @@ import com.cs407.knot_client_android.data.local.TokenStore
 import com.cs407.knot_client_android.data.model.response.ConversationMessage
 import com.cs407.knot_client_android.data.model.response.MapPostDetailResponse
 import com.cs407.knot_client_android.data.model.response.MapPostNearby
+import com.cs407.knot_client_android.data.model.WebSocketMessage
+import com.cs407.knot_client_android.data.model.MessageNewMessage
+import com.cs407.knot_client_android.ui.main.MainViewModel
+import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -68,6 +72,7 @@ fun PostDetailSheet(
     post: MapPostNearby?,
     isVisible: Boolean,
     onDismiss: () -> Unit,
+    mainViewModel: MainViewModel,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -79,6 +84,7 @@ fun PostDetailSheet(
     var isLoadingDetail by remember { mutableStateOf(false) }
     var isLoadingComments by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var localCommentCount by remember { mutableStateOf(0) }
     
     // 加载帖子详情和评论
     LaunchedEffect(post?.mapPostId, isVisible) {
@@ -94,6 +100,7 @@ fun PostDetailSheet(
                 val response = apiService.getMapPostDetail("Bearer $token", post.mapPostId)
                 if (response.success && response.data != null) {
                     postDetail = response.data
+                    localCommentCount = response.data.commentCount
                     
                     // 加载评论
                     isLoadingComments = true
@@ -133,10 +140,51 @@ fun PostDetailSheet(
         }
     }
     
+    // 🔔 监听 WebSocket 消息（实时接收新评论）
+    LaunchedEffect(isVisible, postDetail?.convId) {
+        postDetail?.let { currentPostDetail ->
+            if (isVisible) {
+                mainViewModel.wsManager.rawMessages.collect { message ->
+                    message?.let {
+                        try {
+                            val gson = Gson()
+                            val baseMessage = gson.fromJson(it, WebSocketMessage::class.java)
+                            
+                            if (baseMessage.type == "MSG_NEW") {
+                                val msgNew = gson.fromJson(it, MessageNewMessage::class.java)
+                                
+                                // 只处理当前对话的消息
+                                if (msgNew.convId == currentPostDetail.convId) {
+                                    // 创建新评论
+                                    val newComment = Comment(
+                                        commentId = msgNew.msgId,
+                                        username = "User ${msgNew.fromUid}",
+                                        content = msgNew.contentText ?: "",
+                                        timestamp = "just now",
+                                        likeCount = 0
+                                    )
+                                    
+                                    // 添加到评论列表开头
+                                    comments = listOf(newComment) + comments
+                                    
+                                    // 本地评论数 +1
+                                    localCommentCount += 1
+                                }
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     PostDetailSheetContent(
         post = post,
         postDetail = postDetail,
         comments = comments,
+        localCommentCount = localCommentCount,
         isVisible = isVisible,
         isLoadingDetail = isLoadingDetail,
         isLoadingComments = isLoadingComments,
@@ -175,6 +223,7 @@ private fun PostDetailSheetContent(
     post: MapPostNearby?,
     postDetail: MapPostDetailResponse?,
     comments: List<Comment>,
+    localCommentCount: Int,
     isVisible: Boolean,
     isLoadingDetail: Boolean,
     isLoadingComments: Boolean,
@@ -410,6 +459,7 @@ private fun PostDetailSheetContent(
                                 PostContentSection(
                                     postDetail = postDetail,
                                     post = post,
+                                    localCommentCount = localCommentCount,
                                     onDrag = { dragAmount ->
                                         // 实时跟随手指
                                         val newHeight = (animatedHeight.value - dragAmount).coerceIn(
@@ -438,7 +488,7 @@ private fun PostDetailSheetContent(
                             item {
                                 Spacer(Modifier.height(24.dp))
                                 Text(
-                                    text = "COMMENTS (${comments.size})",
+                                    text = "COMMENTS ($localCommentCount)",
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color(0xFF1C1B1F)
@@ -595,6 +645,7 @@ private fun PostDetailSheetContent(
 fun PostContentSection(
     postDetail: MapPostDetailResponse,
     post: MapPostNearby?,
+    localCommentCount: Int, // 本地评论数（实时更新）
     onDrag: (Float) -> Unit = {},
     onDragStart: () -> Unit = {},
     onDragEnd: () -> Unit = {},
@@ -706,7 +757,7 @@ fun PostContentSection(
             )
             StatItem(
                 icon = Icons.Outlined.Create,
-                count = postDetail.commentCount,
+                count = localCommentCount,
                 label = "Comments"
             )
         }

@@ -103,6 +103,7 @@ import kotlinx.coroutines.launch
 import com.cs407.knot_client_android.ui.main.MainViewModel
 import com.cs407.knot_client_android.data.model.WebSocketMessage
 import com.cs407.knot_client_android.data.model.MapPostNewMessage
+import com.cs407.knot_client_android.data.model.MessageNewMessage
 import com.google.gson.Gson
 
 @Composable
@@ -380,7 +381,7 @@ fun MapScreen(
         }
     }
     
-    // 🔔 监听 WebSocket 消息（实时推送新帖子）
+    // 🔔 监听 WebSocket 消息（实时推送新帖子 + 更新统计数据）
     LaunchedEffect(Unit) {
         mainViewModel.wsManager.rawMessages.collect { message ->
             message?.let {
@@ -389,45 +390,68 @@ fun MapScreen(
                     val gson = Gson()
                     val baseMessage = gson.fromJson(it, WebSocketMessage::class.java)
                     
-                    if (baseMessage.type == "MAP_POST_NEW") {
-                        // 解析完整消息
-                        val mapPostNew = gson.fromJson(it, MapPostNewMessage::class.java)
-                        
-                        // 转换为 MapPostNearby 格式
-                        val newPost = MapPostNearby(
-                            mapPostId = mapPostNew.mapPostId,
-                            convId = mapPostNew.convId,
-                            title = mapPostNew.title,
-                            description = mapPostNew.description,
-                            mediaUrls = mapPostNew.mediaUrls,
-                            locLat = mapPostNew.loc.lat,
-                            locLng = mapPostNew.loc.lng,
-                            locName = mapPostNew.loc.name,
-                            distance = 0.0,  // 暂时设置为 0
-                            creatorId = mapPostNew.creatorId,
-                            creatorUsername = mapPostNew.creatorUsername,
-                            creatorAvatar = mapPostNew.creatorAvatar,
-                            viewCount = 0,
-                            likeCount = 0,
-                            commentCount = 0,
-                            postType = "ALL",
-                            createdAtMs = mapPostNew.createdAtMs
-                        )
-                        
-                        // 添加到缓存（去重）
-                        if (!mapPostsCache.containsKey(newPost.mapPostId)) {
-                            mapPostsCache = mapPostsCache + (newPost.mapPostId to newPost)
+                    when (baseMessage.type) {
+                        "MAP_POST_NEW" -> {
+                            // 解析完整消息
+                            val mapPostNew = gson.fromJson(it, MapPostNewMessage::class.java)
                             
-                            // 延迟一下，然后显示动画
-                            delay(300)
-                            visibleMarkerIds = visibleMarkerIds + newPost.mapPostId
+                            // 转换为 MapPostNearby 格式
+                            val newPost = MapPostNearby(
+                                mapPostId = mapPostNew.mapPostId,
+                                convId = mapPostNew.convId,
+                                title = mapPostNew.title,
+                                description = mapPostNew.description,
+                                mediaUrls = mapPostNew.mediaUrls,
+                                locLat = mapPostNew.loc.lat,
+                                locLng = mapPostNew.loc.lng,
+                                locName = mapPostNew.loc.name,
+                                distance = 0.0,  // 暂时设置为 0
+                                creatorId = mapPostNew.creatorId,
+                                creatorUsername = mapPostNew.creatorUsername,
+                                creatorAvatar = mapPostNew.creatorAvatar,
+                                viewCount = 0,
+                                likeCount = 0,
+                                commentCount = 0,
+                                postType = "ALL",
+                                createdAtMs = mapPostNew.createdAtMs
+                            )
                             
-                            // 显示提示
-                            snackbarHostState.showSnackbar("🎉 ${mapPostNew.creatorUsername} 发布了新帖子！")
+                            // 添加到缓存（去重）
+                            if (!mapPostsCache.containsKey(newPost.mapPostId)) {
+                                mapPostsCache = mapPostsCache + (newPost.mapPostId to newPost)
+                                
+                                // 延迟一下，然后显示动画
+                                delay(300)
+                                visibleMarkerIds = visibleMarkerIds + newPost.mapPostId
+                                
+                                // 显示提示
+                                snackbarHostState.showSnackbar("🎉 ${mapPostNew.creatorUsername} 发布了新帖子！")
+                            }
+                        }
+                        
+                        "MSG_NEW" -> {
+                            // 新评论消息 - 更新对应帖子的 commentCount
+                            val msgNew = gson.fromJson(it, MessageNewMessage::class.java)
+                            
+                            // 查找对应的帖子（通过 convId）
+                            val targetPost = mapPostsCache.values.find { post -> 
+                                post.convId == msgNew.convId 
+                            }
+                            
+                            targetPost?.let { post ->
+                                // 创建更新后的帖子（commentCount +1）
+                                val updatedPost = post.copy(
+                                    commentCount = post.commentCount + 1
+                                )
+                                
+                                // 更新缓存
+                                mapPostsCache = mapPostsCache + (post.mapPostId to updatedPost)
+                            }
                         }
                     }
                 } catch (e: Exception) {
                     // 忽略解析错误
+                    e.printStackTrace()
                 }
             }
         }

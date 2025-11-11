@@ -33,3 +33,14 @@ data class LocationInfo(
     val name: String
 )
 
+/**
+ * 新消息通知 (MSG_NEW)
+ */
+data class MessageNewMessage(
+    val type: String,
+    val convId: Long,
+    val fromUid: Long,
+    val msgId: Long,
+    val contentText: String?
+)
+
