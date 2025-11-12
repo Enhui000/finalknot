@@ -986,19 +986,19 @@ fun MapScreen(
         }
         
         // DEBUG: 显示 zoom 级别和 marker 模式 DO NOT DELETE THIS CODE
-        Text(
-            text = "Zoom: ${"%.1f".format(currentZoom)} | ${if (currentZoom > 13.0) "Details" else "Clusters"}",
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(16.dp)
-                .background(
-                    color = Color.White.copy(alpha = 0.9f),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            color = Color.Black,
-            fontSize = 12.sp
-        )
+        // Text(
+        //     text = "Zoom: ${"%.1f".format(currentZoom)} | ${if (currentZoom > 13.0) "Details" else "Clusters"}",
+        //     modifier = Modifier
+        //         .align(Alignment.BottomStart)
+        //         .padding(16.dp)
+        //         .background(
+        //             color = Color.White.copy(alpha = 0.9f),
+        //             shape = RoundedCornerShape(8.dp)
+        //         )
+        //         .padding(horizontal = 12.dp, vertical = 6.dp),
+        //     color = Color.Black,
+        //     fontSize = 12.sp
+        // )
         
         // DEBUG: DO NOT DELETE THIS CODE
         // // 显示当前位置信息（调试用）- 白色半透明背景
