@@ -11,7 +11,13 @@ class AuthRepository(context: Context, baseUrl: String) {
     suspend fun login(username: String, password: String) {
         val resp = api.login(LoginReq(username, password))
         if (resp.success && resp.data != null) {
-            tokenStore.save(resp.data.accessToken, resp.data.refreshToken)
+            //tokenStore.save(resp.data.accessToken, resp.data.refreshToken)
+            tokenStore.save(
+                resp.data.accessToken,
+                resp.data.refreshToken,
+                resp.data.userId?.toLong(),
+                resp.data.username
+            )
         } else {
             error(resp.message ?: "Login failed")
         }

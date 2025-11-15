@@ -147,7 +147,10 @@ class ChatDetailViewModel(
 
                 val pageData = resp.data
                 if (resp.success && pageData != null) {
-                    val msgs = pageData.messageList.map { it.toUi(myUid) }
+                    //val msgs = pageData.messageList.map { it.toUi(myUid) }
+                    val msgs = pageData.messageList
+                        .map { it.toUi(myUid) }
+                        .sortedBy { it.time }
                     _ui.value = _ui.value.copy(
                         messages = msgs,
                         loading = false,

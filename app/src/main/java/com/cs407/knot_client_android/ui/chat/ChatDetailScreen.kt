@@ -2,8 +2,10 @@ package com.cs407.knot_client_android.ui.chat
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -62,6 +64,14 @@ fun ChatDetailScreen(
 
         HorizontalDivider(Modifier, DividerDefaults.Thickness, color = Color(0x11000000))
 
+        val listState = rememberLazyListState()
+
+        LaunchedEffect(state.messages.size) {
+            if (state.messages.isNotEmpty()) {
+                listState.animateScrollToItem(state.messages.lastIndex)
+            }
+        }
+
         Box(modifier = Modifier.weight(1f)) {
             if (state.loading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -73,14 +83,20 @@ fun ChatDetailScreen(
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 12.dp, vertical = 8.dp),
-                    reverseLayout = true   // 最近的在底部
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    //reverseLayout = true   // 最近的在底部
                 ) {
-                    items(state.messages.asReversed(), key = { it.clientMsgId!! }) { msg ->
+                    //items(state.messages.asReversed(), key = { it.clientMsgId!! }) { msg ->
+                    items(
+                        items = state.messages,
+                        key = { it.clientMsgId ?: "server-${it.msgId}" }
+                    ) { msg ->
                         MessageBubble(msg)
-                        Spacer(Modifier.height(6.dp))
+                        //Spacer(Modifier.height(6.dp))
                     }
                 }
             }
