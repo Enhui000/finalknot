@@ -12,6 +12,9 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import okhttp3.*
 import okio.ByteString
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 class SimpleWebSocketManager {
     private var webSocket: WebSocket? = null
@@ -27,6 +30,10 @@ class SimpleWebSocketManager {
 
     private val _messages = MutableStateFlow<List<String>>(emptyList())
     val messages: StateFlow<List<String>> = _messages
+
+    //new added
+    private val _incomingMessages = MutableSharedFlow<String>(extraBufferCapacity = 64)
+    val incomingMessages: SharedFlow<String> = _incomingMessages
 
 //    fun connect(url: String) {
 //        if (webSocket != null) {
@@ -96,6 +103,7 @@ class SimpleWebSocketManager {
 
             override fun onMessage(webSocket: WebSocket, text: String) {
                 addLog("⬇️ 收到: $text")
+                _incomingMessages.tryEmit(text)
             }
 
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {

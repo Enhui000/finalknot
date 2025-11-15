@@ -50,7 +50,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.navigation.compose)
-    
+
+
     // Mapbox Maps SDK
     implementation("com.mapbox.maps:android:11.16.2")
     // Mapbox Compose Extension
